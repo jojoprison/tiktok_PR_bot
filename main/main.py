@@ -105,7 +105,7 @@ async def user_in_channel_checker():
 
     elif last_check != None and count_of_channels >= 1:
 
-        now_time = datetime.datetime.now()
+        now_time = datetime.now()
         delta = last_check - now_time
         if delta.seconds >= 3600:
             await check_user_in_ch()
@@ -137,7 +137,7 @@ async def handle_not_admin(m: types.Message):
 
 @dp.message_handler(lambda m: m.text == '👤 Профиль' and user_banned(m.from_user.id) is False)
 async def profile_button_handle(m: types.Message):
-    await m.reply(PROFILE(m), reply=False, parse_mode='Markdown')
+    await m.reply(PROFILE(m), reply=False, parse_mode='HTML')
 
 
 @dp.message_handler(lambda m: m.text == 'Заказать')
@@ -147,32 +147,44 @@ async def add_tt_video_handle(m: types.Message):
     await m.reply(GIVE_TT_VIDEO_LINK, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
 
 
-@dp.message_handler(content_types=['text', 'video'], state='GET_TT_VIDEO')
+@dp.message_handler(content_types=['text'], state='GET_TT_VIDEO')
 async def tt_video_handle(m: types.Message):
     try:
         if m.content_type == 'text':
-            link = m.text
+            clip_link = m.text
 
-            # TODO доделать парсер
-            if check_tt_link(link):
-                pass
+            if valid_tt_link(clip_link):
+                clip_data = get_music_id_from_clip_tt(clip_link)
+                clip_id = clip_data.get('clip_id')
+                music_id = clip_data.get('music_id')
 
-            # TODO сохранять видос/линк на него в БД
-            number = save_tt_video(client=m.from_user.id, video_link=link)
+                # TODO сохранять видос/линк на него в БД
+                clip_id = save_tt_clip(client=m.from_user.id, clip_link=clip_link,
+                                       clip_id=clip_id, music_id=music_id)
 
-            cancel_promotion = InlineKeyboardMarkup()
-            # TODO добавить эту штуку для удаления видоса в случае нажатия кнопки отмена
-            cancel_promotion.add(
-                InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(number)))
+                cancel_promotion = InlineKeyboardMarkup()
+                # TODO добавить эту штуку для удаления видоса в случае нажатия кнопки отмена
+                cancel_promotion.add(
+                    InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(clip_id)))
 
-            await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
-            await m.reply(SEND_CLIP_COUNT(m.from_user.id, link), reply=False, parse_mode='HTML',
-                          reply_markup=cancel_promotion)
+                await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+                await m.reply(SEND_CLIP_COUNT(m.from_user.id, clip_link), reply=False, parse_mode='HTML',
+                              reply_markup=cancel_promotion)
 
-            state = dp.current_state(user=m.from_user.id)
+                state = dp.current_state(user=m.from_user.id)
 
-            # TODO поменять статус и начать пиар видео
-            await state.set_state('SEND_CLIP_COUNT')
+                # TODO поменять статус и начать пиар видео
+                await state.set_state('SEND_CLIP_COUNT')
+            else:
+                cancel = InlineKeyboardMarkup()
+                # TODO добавить эту штуку для удаления видоса в случае нажатия кнопки отмена
+                cancel.add(
+                    InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+
+                await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+                await m.reply(WRONG_TT_CLIP_LINK, reply=False, parse_mode='HTML',
+                              reply_markup=cancel)
+
         else:
             await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
 
@@ -190,18 +202,99 @@ async def tt_video_handle(m: types.Message):
 
 
 # TODO сделать метод обработки ссылки
-def check_tt_link(link):
-    link_parsed = url_parser.urlparse(link)
-    print(link_parsed)
-    return link
+def valid_tt_link(link):
+    netloc = url_parser.urlparse(link).netloc
+
+    return netloc == 'www.tiktok.com' or netloc == 'vm.tiktok.com'
+
+
+# TODO сделать метод проверки аккаута TT
+def check_tt_account_link(link):
+    netloc = url_parser.urlparse(link).netloc
+
+    if netloc == 'www.tiktok.com' or netloc == 'vm.tiktok.com':
+        try:
+            tt_acc_name = get_tt_acc_name(link)
+        except Exception as e:
+            return False
+
+        print(tt_acc_name)
+        print(type(tt_acc_name))
+
+        return True
+    else:
+        return False
+
+
+def tt_acc_not_exist(user_id):
+    link = tt_account_link(user_id)
+
+    # проверяет есть ли в базе вообще что то стринговое
+    return not isinstance(link, str)
 
 
 @dp.message_handler(lambda m: m.text == 'Заработать')
-async def sent_instruction_for_subscribe(m: types.Message):
+async def sent_instruction_for_get_money(m: types.Message):
+    user_id = m.from_user.id
+
+    if (tt_acc_not_exist(user_id)):
+        state = dp.current_state(user=user_id)
+        await state.set_state('REG_TT_ACCOUNT')
+        await m.reply(TT_ACCOUNT, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
+    else:
+        # проверяем работу юзернейма TT акка
+        update_tt_acc_username(user_id)
+        await get_money(m)
+
+
+@dp.message_handler(state='REG_TT_ACCOUNT')
+async def tt_account_reg(m: types.Message):
+    try:
+        if m.content_type == 'text':
+            tt_acc_link = m.text
+
+            # TODO доделать парсер аккаута
+            if check_tt_account_link(tt_acc_link):
+                # TODO сохранять ссылку на акк в БД юзера
+                user_id = m.from_user.id
+                return_tt_acc = add_tt_acc_to_user(user_id, tt_acc_link)
+
+                # cancel_promotion = InlineKeyboardMarkup()
+                # TODO добавить эту штуку для отвязки акка в случае нажатия кнопки отмена
+                # cancel_promotion.add(
+                #     InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_tt_acc_' + str(user_id)))
+
+                await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+                await m.reply(TT_ACC_ACCEPTED, reply=False, parse_mode='HTML')
+                # reply_markup=cancel_promotion)
+            else:
+                await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+                await m.reply(TT_ACC_WRONG, reply=False, parse_mode='HTML')
+
+            state = dp.current_state(user=m.from_user.id)
+            await state.reset_state()
+        else:
+            await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+
+            cancel_promotion = InlineKeyboardMarkup()
+            # TODO сделать обработку этой кнопки отмены
+            cancel_promotion.add(
+                InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+
+            # TODO Добраотка
+            await m.reply(TT_LINK_ACC_ERR(), reply=False, parse_mode='HTML',
+                          reply_markup=cancel_menu)
+
+    except Exception as e:
+        await m.reply(e, reply_markup=cancel_menu)
+
+
+async def get_money(m):
     user_id = m.from_user.id
     # все видосы для продвижения
     video_list = videos_for_work(user_id)
     skipped_videos = get_skipped_videos(user_id)
+
     # TODO проверить пропущенные видосы и удалять их из списка
 
     if video_list != 0:
@@ -212,10 +305,11 @@ async def sent_instruction_for_subscribe(m: types.Message):
         tt_menu.add(InlineKeyboardButton(text='Перейти к TT видео с треком', url=tt_video_link))
         # video_list[tt_video_link] передаем id из БД
         # TODO потом сделать метод проверки видоса через TT API
-        tt_menu.add(InlineKeyboardButton(text='Проверить', callback_data='check_' + str(
+        tt_menu.add(InlineKeyboardButton(text='Проверить', callback_data='check_clip_' + str(
             video_list[tt_video_link])))
-        tt_menu.add(InlineKeyboardButton(text='Пропустить', callback_data='skip_' + str(
-            video_list[tt_video_link])))
+        # TODO Доделать пропуск чтоб обновляло кнопки со списком видосов
+        # tt_menu.add(InlineKeyboardButton(text='Пропустить', callback_data='skip_' + str(
+        #     video_list[tt_video_link])))
 
         await m.reply(RECORD_THIS_TT_VIDEO, reply_markup=tt_menu, reply=False)
 
@@ -297,7 +391,7 @@ async def handle_send_clip_count(m: types.Message):
 
         # TODO выводить ссылку на видос
         await m.reply(
-            CONFIRM_ADDING_CHANNEL(video_id, video_to_promo_count, video_to_promo_count * CASH_MIN),
+            CONFIRM_ADDING_VIDEO_TO_PROMO(video_to_promo_count, video_to_promo_count * CASH_MIN),
             reply=False,
             reply_markup=confirmation_menu)
     else:
@@ -508,16 +602,35 @@ async def cancel_wnum_button_handler(c: types.callback_query):
         await state.reset_state()
 
 
-@dp.callback_query_handler(lambda c: 'confirm_' in c.data, state='CONFIRMATION')
-async def confirm_button_handler(c: types.callback_query):
-    number = c.data.replace('confirm_', '')
-    luck = confirm_order(number)
-    if luck == 1:
-        await c.message.edit_text(CHANNEL_SUCCESSFULLY_ADED)
+@dp.callback_query_handler(lambda c: 'cancel_tt_acc_' in c.data, state=['REG_TT_ACCOUNT'])
+async def cancel_tt_acc_button_handler(c: types.callback_query):
+    user_id = c.data.replace('cancel_tt_acc_', '')
+
+    # TODO сделать отвязку
+    status = delete_tt_account_from_user_db(user_id)
+
+    if status == 0:
+        await c.message.edit_text(TT_ACC_ACCEPTED)
         state = dp.current_state(user=c.from_user.id)
         await state.reset_state()
     else:
-        await c.message.edit_text(luck)
+        await c.message.edit_text(TT_ACC_DELETED)
+        state = dp.current_state(user=c.from_user.id)
+        await state.reset_state()
+
+
+@dp.callback_query_handler(lambda c: 'confirm_' in c.data, state='CONFIRMATION')
+async def confirm_button_handler(c: types.callback_query):
+    clip_number = c.data.replace('confirm_', '')
+
+    confirm_return = confirm_clip_promo(clip_number)
+
+    if confirm_return == 1:
+        await c.message.edit_text(CLIP_SUCCESSFULLY_ADDED)
+        state = dp.current_state(user=c.from_user.id)
+        await state.reset_state()
+    else:
+        await c.message.edit_text(confirm_return)
         state = dp.current_state(user=c.from_user.id)
         await state.reset_state()
 
@@ -558,6 +671,18 @@ async def check_user_in_channel(c: types.CallbackQuery):
         await c.message.edit_text(YOU_DID_THIS)
 
 
+@dp.callback_query_handler(lambda c: 'check_clip_' in c.data)
+async def check_clip(c: types.CallbackQuery):
+    video_id = c.data.replace('check_clip_', '')
+    user_id = c.from_user.id
+
+    # TODO добавить проверку музыки по полю из БД
+    await check_clip_for_paying(user_id, video_id)
+
+    await c.message.edit_text(TT_CLIP_CHECKING)
+
+
+# TODO сделать обновление инлайн клавы и видоса при нажатии на кнопку
 @dp.callback_query_handler(lambda c: 'skip_' in c.data)
 async def skip_video(c: types.CallbackQuery):
     video_id = c.data.replace('skip_', '')
@@ -565,7 +690,14 @@ async def skip_video(c: types.CallbackQuery):
 
     add_video_to_skipped(user_id, video_id)
 
-    await bot.send_message(user_id, TT_VIDEO_SKIPPED)
+    await c.message.edit_text(TT_VIDEO_SKIPPED)
+
+    # await bot.send_message(user_id, TT_VIDEO_SKIPPED)
+
+    state = dp.current_state(user=user_id)
+    await state.set_state('GET_MONEY')
+
+    await get_money(c.message)
 
     # info = promotion_info(number)
     # if check_user_to_do_this(number, info[1]) == False:

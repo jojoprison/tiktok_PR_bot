@@ -1,39 +1,58 @@
 import datetime
 import sqlite3
+from settings import *
+from bs4 import BeautifulSoup
+import requests
+from TikTokApi import TikTokApi
+from datetime import datetime
+import pytz
+import urllib.parse as url_parser
 
 conn = sqlite3.connect('ttdb.db')
 
 
-def save_tt_video(**client):
-    client_id = client['client']
-    link = client['video_link']
+def save_tt_clip(**data):
+    client_id = data['client']
+    clip_link = data['clip_link']
+    clip_id = data['clip_id']
+    music_id = data['music_id']
 
-    if 'goal' in client:
-        goal = client['goal']
+    if 'goal' in data:
+        goal = data['goal']
     else:
         goal = 0
 
     # TODO подумать как по другому проверять параметры на валидность
     if client_id:
-        conn.execute(
-            '''INSERT INTO videos(tt_id_video, client, goal, status, abusers) VALUES(?,?,?,?,?)''',
-            (link, client_id, goal, 1, str({})))
+        cur = conn.cursor()
+        cur.execute(
+            '''INSERT INTO videos(client, tt_clip_link, tt_clip_id, tt_music_id, goal, status, abusers) 
+            VALUES(?,?,?,?,?,?,?)''', (client_id, clip_link, clip_id, music_id, goal, 1, str({})))
         conn.commit()
 
-        number = conn.execute('''SELECT MAX(number) FROM videos''').fetchall()[0][0]
+        db_clip_id = cur.execute('''SELECT MAX(order_id) FROM videos''').fetchall()[0][0]
 
-        return number
+        return db_clip_id
 
 
 def update_tt_video_goal(goal):
     cur = conn.cursor()
 
-    last_video_id = cur.execute('''SELECT MAX(number) FROM videos''').fetchall()[0][0]
+    last_video_id = cur.execute('''SELECT MAX(order_id) FROM videos''').fetchall()[0][0]
 
-    cur.execute('''UPDATE videos SET goal = ? WHERE number = ?''', (goal, last_video_id,))
+    cur.execute('''UPDATE videos SET goal = ? WHERE order_id = ?''', (goal, last_video_id,))
     conn.commit()
 
     return last_video_id
+
+
+def add_tt_acc_to_user(user_id, tt_acc_link):
+    cur = conn.cursor()
+
+    cur.execute('''UPDATE users SET tt_acc_link = ? WHERE id = ?''', (tt_acc_link, user_id,))
+    conn.commit()
+
+    return True
 
 
 def videos_for_work(user_id):
@@ -56,19 +75,22 @@ def videos_for_work(user_id):
         return 0
 
 
-# TODO сделать методв проверки видосов, которые не нужно показывать в продвижении (и сделать таймаут для них)
+# TODO сделать таймаут для пропущенных видосов (допустим по 10 минут с проверкой после нажатия кнопки юзером)
 def get_skipped_videos(user_id):
     cur = conn.cursor()
-    videos = cur.execute('''SELECT skipped_videos FROM users WHERE id = ?''', (user_id,))
-    skipped_videos = videos.fetchall()
 
-    return eval(skipped_videos)
+    videos = cur.execute('''SELECT skipped_videos FROM users WHERE id = ?''', (user_id,))
+    skipped_videos_fetchall = videos.fetchall()
+
+    skipped_clips = eval(skipped_videos_fetchall[0][0])
+
+    return skipped_clips
 
 
 def edit_promo_status(number, status):
     cur = conn.cursor()
-    sql = cur.execute('''SELECT COUNT(number), tt_id_video, client, goal, status, abusers
-                        FROM videos WHERE number = ?''', (number,))
+    sql = cur.execute('''SELECT COUNT(order_id), tt_clip_id, client, goal, status, abusers
+                        FROM videos WHERE order_id = ?''', (number,))
 
     sql_fetchall = sql.fetchall()
     print(sql_fetchall[0][0])
@@ -79,7 +101,7 @@ def edit_promo_status(number, status):
     print(sql_fetchall[0][5])
 
     if sql_fetchall[0][0] == 1 and status == 0:
-        cur.execute('''UPDATE videos SET status = ? WHERE number = ?''', (status, number,))
+        cur.execute('''UPDATE videos SET status = ? WHERE order_id = ?''', (status, number,))
 
         # TODO непонятно, меняет баланс в случае если бот в канале не админ
         delta = len(eval(sql_fetchall[0][5])) - sql_fetchall[0][3]
@@ -101,10 +123,10 @@ def edit_promo_status(number, status):
 def delete_tt_video_from_db(number):
     number = int(number)
 
-    status = conn.execute('''SELECT status FROM videos WHERE number = ?''', (number,))
+    status = conn.execute('''SELECT status FROM videos WHERE order_id = ?''', (number,))
 
     if status.fetchall()[0][0] == 0:
-        conn.cursor().execute('''DELETE FROM videos WHERE number = ?''', (number,))
+        conn.cursor().execute('''DELETE FROM videos WHERE order_id = ?''', (number,))
         conn.commit()
     else:
         return 1
@@ -117,13 +139,13 @@ def is_user_in_db_tt(used_id):
 
 def add_user_to_db_tt(user_id):
     conn.cursor().execute(
-        '''INSERT INTO users(id, balance, alltime_videos, referals, skipped_videos) VALUES(?,?,?,?,?)''',
-        (user_id, 0, 0, str([]), str({})))
+        '''INSERT INTO users(id, balance, alltime_clips, referals, skipped_videos, alltime_get_clips) 
+            VALUES(?,?,?,?,?, ?)''', (user_id, 0, 0, str([]), str({}), 0))
     conn.commit()
 
 
 def add_video_to_skipped(user_id, video_id):
-    user_id = int(user_id)
+    video_id = int(video_id)
 
     sql = conn.execute('''SELECT skipped_videos FROM users WHERE id = ?''', (user_id,))
     sql_fetchall = sql.fetchall()
@@ -132,7 +154,7 @@ def add_video_to_skipped(user_id, video_id):
     # преобразует словарь пропущенных видосов до нормального вида
     skipped_videos = eval(skipped_videos)
 
-    skipped_videos[video_id] = datetime.datetime.now()
+    skipped_videos[video_id] = datetime.now()
     conn.cursor().execute('''UPDATE users SET skipped_videos = ? WHERE id = ?''', (str(skipped_videos), user_id))
     conn.commit()
 
@@ -149,10 +171,142 @@ def user_balance_tt(user_id):
 def get_video_stat(client_id):
     cur = conn.cursor()
 
-    video_id_sql = cur.execute('''SELECT MAX(number) FROM videos WHERE client = ?''', (client_id,))
+    video_id_sql = cur.execute('''SELECT MAX(order_id) FROM videos WHERE client = ?''', (client_id,))
     video_id = video_id_sql.fetchall()[0][0]
 
-    stat_list = cur.execute('''SELECT tt_id_video FROM videos WHERE client = ? AND number = ?''',
+    stat_list = cur.execute('''SELECT tt_clip_id FROM videos WHERE client = ? AND order_id = ?''',
                             (client_id, video_id,))
 
     return video_id, stat_list.fetchall()
+
+
+def confirm_clip_promo(clip_number):
+    try:
+        clip_number = int(clip_number)
+
+        prom_info = conn.execute('''SELECT client, goal FROM videos WHERE order_id = ?''', (clip_number,))
+        prom_info = prom_info.fetchall()
+
+        client_id = prom_info[0][0]
+        # общая суммка заказа с учетом стоимости одного клипа
+        clip_goal = prom_info[0][1] * CASH_MIN
+
+        conn.execute('''UPDATE videos SET status = 1 WHERE order_id = ?''', (clip_number,))
+        conn.execute('''UPDATE users SET balance = balance - ? WHERE id = ?''', (clip_goal, client_id,))
+        conn.commit()
+
+        return 1
+    except Exception as e:
+        return e
+
+
+def tt_user_balance(user_id):
+    balance = conn.execute(f'''SELECT balance FROM users WHERE id = ?''', (user_id,))
+    balance = balance.fetchall()[0][0]
+
+    return balance
+
+
+def tt_account_link(user_id):
+    tt_acc_link = conn.execute(f'''SELECT tt_acc_link FROM users WHERE id = ?''', (user_id,))
+    tt_acc_link = tt_acc_link.fetchall()[0][0]
+
+    return tt_acc_link
+
+
+def alltime_clips(user_id):
+    clips = conn.execute(f'''SELECT alltime_clips FROM users WHERE id = {user_id}''')
+    clips = clips.fetchall()[0][0]
+
+    return clips
+
+
+def alltime_get_clips(user_id):
+    clips = conn.execute(f'''SELECT alltime_get_clips FROM users WHERE id = {user_id}''')
+    clips = clips.fetchall()[0][0]
+
+    return clips
+
+
+def get_tt_acc_name(url):
+    headers = {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
+        "accept": "*/*"}
+
+    session = requests.Session()
+    data = session.get(url=url, headers=headers)
+
+    soup = BeautifulSoup(data.text, 'html.parser')
+
+    select_item = soup.find('div', class_='share-title-container')
+
+    username = select_item.find('h2')
+
+    return username.get_text()
+
+
+def update_tt_acc_username(user_id):
+    tt_acc_link = conn.execute(f'''SELECT tt_acc_link FROM users WHERE id = ?''', (user_id,))
+    tt_acc_link = tt_acc_link.fetchall()[0][0]
+
+    tt_acc_username = get_tt_acc_name(tt_acc_link)
+
+    cur = conn.cursor()
+    cur.execute('''UPDATE users SET tt_acc_username = ? WHERE id = ?''', (tt_acc_username, user_id))
+    conn.commit()
+
+    return True
+
+
+# TODO проверка музыку
+async def check_clip_for_paying(user_id, video_id):
+    tt_acc_username = conn.execute(f'''SELECT tt_acc_username FROM users WHERE id = ?''', (user_id,))
+    tt_acc_username = tt_acc_username.fetchall()[0][0]
+    tt_acc_username = tt_acc_username.replace(' ', '')
+
+    tt_api = await TikTokApi.get_instance()
+
+    tt_data = await tt_api.getUser(tt_acc_username)
+
+    tt_clips = await tt_data.get('items')
+
+    last_3_clips = list()
+    for i in range(0, 3):
+        last_3_clips.append(tt_clips[i])
+
+    for clip in last_3_clips:
+        clip_created = clip.get('createTime')
+
+        moscow_tz = pytz.timezone('Europe/Moscow')
+
+        now = datetime.now().astimezone(moscow_tz)
+        clip_created = datetime.utcfromtimestamp(clip_created).astimezone(moscow_tz)
+
+        delta = now - clip_created
+        print(delta)
+
+        seconds = delta.total_seconds()
+        hours = seconds // 3600
+        print(hours)
+
+
+def get_music_id_from_clip_tt(short_clip_url):
+    tt_api = TikTokApi.get_instance(use_selenium=True, custom_verifyFp=verify_fp)
+
+    headers = {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
+        "accept": "*/*"}
+
+    session = requests.Session()
+    full_clip_url = session.get(url=short_clip_url, headers=headers).url
+
+    full_clip_url_path = url_parser.urlparse(full_clip_url).path
+    clip_id = full_clip_url_path.split("/v/")[1].split('.')[0]
+
+    clip_tt = tt_api.getTikTokById(clip_id)
+    music_id = clip_tt.get('itemInfo').get('itemStruct').get('music').get('id')
+
+    clip_data = {'clip_id': clip_id, 'music_id': music_id}
+    print(clip_data)
+
+    return clip_data

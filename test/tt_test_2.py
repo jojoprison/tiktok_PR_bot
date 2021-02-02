@@ -1,4 +1,11 @@
 from TikTokApi import TikTokApi
+from datetime import datetime
+import pytz
+import requests
+from bs4 import BeautifulSoup
+import urllib.request
+import urllib.parse as url_parser
+
 
 s_v_web_id = 'verify_kh96hlyt_z40z1rRE_jkcF_4HXZ_AABt_wf2Q6wPRX0Cq'
 
@@ -7,14 +14,102 @@ api = TikTokApi.get_instance()
 results = 10
 
 # diz = api.byUsername('squalordf')
-print(api.search_for_music('ViolA - телепортируюсь', 1))
+# print(api.search_for_music('ViolA - телепортируюсь', 1))
 
 # print(api.bySound('6889603433188296706', 1))
 
-# print(api.getUser('1xboys'))
+# diz = api.getUser('squalordf')
+# print(api.getUser('ugadai5'))
+# diz = api.getUser('1xboys')
+
+
+
+url = 'https://vm.tiktok.com/ZSKfUvw8/'
+headers = {
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
+    "accept": "*/*"}
+
+session = requests.Session()
+data = session.get(url=url, headers=headers)
+
+new_url = data.url
+
+link_parsed = url_parser.urlparse(new_url)
+path = link_parsed.path
+clip_id = path.split("/v/")[1].split('.')[0]
+
+clip = api.getTikTokById(clip_id)
+info = clip.get('itemInfo')
+struct = info.get('itemStruct')
+music = struct.get('music')
+music_id = music.get('id')
+print(music_id)
+
+
+# soup = BeautifulSoup(data.text, 'html.parser')
+
+# print(soup)
+
+# response = urllib.request.urlopen(url)
+# new_url = response.geturl()
+# print(new_url)
+
+#
+#
+#
+# select_item = soup.find('div', class_='share-title-container')
+#
+# username = select_item.find('h2')
+#
+# return username.get_text()
+#
+
+
+
+
+# diz = diz.get('items')
+#
+# last_3_clips = list()
+# for i in range(0, 1):
+#     last_3_clips.append(diz[i])
+#
+# for clip in last_3_clips:
+#     clip_created = clip.get('createTime')
+#
+#     moscow_tz = pytz.timezone('Europe/Moscow')
+#
+#     now = datetime.now().astimezone(moscow_tz)
+#     clip_created = datetime.utcfromtimestamp(clip_created).astimezone(moscow_tz)
+#
+#     delta = now - clip_created
+#     print(delta)
+#     seconds = delta.total_seconds()
+#     hours = seconds // 3600
+#     print(hours)
+
+
+# if now.date() == clip_created.date():
+#     print('DATES MATCH')
+# else:
+#     print('fuck dates')
+#
+# now_time = now.time().strftime("%H:%M:%S")
+#
+# formatted_clip = clip_created.time().strftime("%H:%M:%S")
+#
+# hours, minutes, seconds = formatted.split(':')
+# seconds = int(seconds) + (int(minutes) * 60)
+# print(seconds <= (59 * 60))
+
+
+# print(api.getTikTokByUrl('https://vm.tiktok.com/ZSEpG69D/'))
+
+# print('https://vm.tiktok.com/ZSEpv49b/')
+
+# get_Video_By_Url
 
 # for tiktok in diz:
-    # Prints the id of the tiktok
-    # print(tiktok)
+# Prints the id of the tiktok
+# print(tiktok)
 
 # print(len(diz))

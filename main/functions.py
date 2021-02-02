@@ -162,6 +162,22 @@ def promotion_info(number_of_promotion):
         return 0, info[0][2]
 
 
+def subs_info():
+    cur = conn.cursor()
+
+    info = cur.execute('''SELECT subscriptions, subs_count, id FROM channels WHERE number = ?''', (1,))
+    info = info.fetchall()
+
+    subscriptions = info[0][0]
+    print(type(subscriptions))
+    print(subscriptions)
+
+    subscriptions = eval(subscriptions)
+
+    print(type(subscriptions))
+    print(subscriptions)
+
+
 def add_user_to_subscribers(number, user_id):
     number = int(number)
     get_count_of_num_i_status = conn.execute('''SELECT COUNT(number), status FROM channels WHERE number = ?''',
