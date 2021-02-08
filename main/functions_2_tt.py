@@ -300,13 +300,26 @@ def get_music_id_from_clip_tt(short_clip_url):
     session = requests.Session()
     full_clip_url = session.get(url=short_clip_url, headers=headers).url
 
-    full_clip_url_path = url_parser.urlparse(full_clip_url).path
-    clip_id = full_clip_url_path.split("/v/")[1].split('.')[0]
+    full_clip_url_converted = url_parser.urlparse(full_clip_url).path
+    clip_id = get_clip_id_from_url(full_clip_url_converted)
 
-    clip_tt = tt_api.getTikTokById(clip_id)
+    # clip_tt = tt_api.getTikTokById(clip_id)
+    clip_tt = tt_api.getTikTokByUrl(full_clip_url_converted)
     music_id = clip_tt.get('itemInfo').get('itemStruct').get('music').get('id')
 
     clip_data = {'clip_id': clip_id, 'music_id': music_id}
     print(clip_data)
 
     return clip_data
+
+
+def get_clip_id_from_url(url):
+    url_parts = url.split('/')
+    url_video_tag = url_parts[1]
+
+    if url_video_tag.startswith('@'):
+        clip_id = url_parts[3]
+    else:
+        clip_id = url_parts[2].split('.')[0]
+
+    return clip_id

@@ -1359,7 +1359,7 @@
       <Position>2</Position>
       <DataType>integer|0s</DataType>
     </column>
-    <column id="499" parent="171" name="alltime_videos">
+    <column id="499" parent="171" name="alltime_clips">
       <Position>3</Position>
       <DataType>integer|0s</DataType>
     </column>
@@ -1371,32 +1371,56 @@
       <Position>5</Position>
       <DataType>text|0s</DataType>
     </column>
-    <column id="502" parent="172" name="number">
+    <column id="502" parent="171" name="alltime_get_clips">
+      <Position>6</Position>
+      <DataType>int|0s</DataType>
+    </column>
+    <column id="503" parent="171" name="tt_acc_link">
+      <Position>7</Position>
+      <DataType>text|0s</DataType>
+    </column>
+    <column id="504" parent="171" name="tt_acc_username">
+      <Position>8</Position>
+      <DataType>text|0s</DataType>
+    </column>
+    <key id="505" parent="171" name="users_pk">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="506" parent="172" name="order_id">
       <Position>1</Position>
       <DataType>integer|0s</DataType>
     </column>
-    <column id="503" parent="172" name="tt_id_video">
+    <column id="507" parent="172" name="tt_clip_id">
       <Position>2</Position>
       <DataType>integer|0s</DataType>
     </column>
-    <column id="504" parent="172" name="client">
+    <column id="508" parent="172" name="client">
       <Position>3</Position>
       <DataType>integer|0s</DataType>
     </column>
-    <column id="505" parent="172" name="goal">
+    <column id="509" parent="172" name="goal">
       <Position>4</Position>
       <DataType>int|0s</DataType>
     </column>
-    <column id="506" parent="172" name="status">
+    <column id="510" parent="172" name="status">
       <Position>5</Position>
       <DataType>int|0s</DataType>
     </column>
-    <column id="507" parent="172" name="abusers">
+    <column id="511" parent="172" name="abusers">
       <Position>6</Position>
       <DataType>text|0s</DataType>
     </column>
-    <key id="508" parent="172" name="videos_pk">
-      <ColNames>number</ColNames>
+    <column id="512" parent="172" name="tt_music_id">
+      <Position>7</Position>
+      <DataType>int|0s</DataType>
+    </column>
+    <column id="513" parent="172" name="tt_clip_link">
+      <Position>8</Position>
+      <DataType>text|0s</DataType>
+    </column>
+    <key id="514" parent="172" name="videos_pk">
+      <ColNames>order_id</ColNames>
       <Primary>1</Primary>
     </key>
   </database-model>
