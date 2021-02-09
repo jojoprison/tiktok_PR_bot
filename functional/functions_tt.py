@@ -1,6 +1,6 @@
 import datetime
 import sqlite3
-from settings import *
+from config.settings import *
 from bs4 import BeautifulSoup
 import requests
 from TikTokApi import TikTokApi
@@ -8,7 +8,7 @@ from datetime import datetime
 import pytz
 import urllib.parse as url_parser
 
-conn = sqlite3.connect('ttdb.db')
+conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
 
 
 def save_tt_clip(**data):
@@ -291,7 +291,7 @@ async def check_clip_for_paying(user_id, video_id):
 
 
 def get_music_id_from_clip_tt(short_clip_url):
-    tt_api = TikTokApi.get_instance(use_selenium=True, custom_verifyFp=verify_fp)
+    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP)
 
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
@@ -303,8 +303,8 @@ def get_music_id_from_clip_tt(short_clip_url):
     full_clip_url_converted = url_parser.urlparse(full_clip_url).path
     clip_id = get_clip_id_from_url(full_clip_url_converted)
 
-    # clip_tt = tt_api.getTikTokById(clip_id)
-    clip_tt = tt_api.getTikTokByUrl(full_clip_url_converted)
+    clip_tt = tt_api.getTikTokById(clip_id)
+    # clip_tt = tt_api.getTikTokByUrl(full_clip_url_converted)
     music_id = clip_tt.get('itemInfo').get('itemStruct').get('music').get('id')
 
     clip_data = {'clip_id': clip_id, 'music_id': music_id}
