@@ -5,18 +5,22 @@ import requests
 from bs4 import BeautifulSoup
 import urllib.request
 import urllib.parse as url_parser
-
+from config.settings import TT_VERIFY_FP
 
 s_v_web_id = 'verify_kh96hlyt_z40z1rRE_jkcF_4HXZ_AABt_wf2Q6wPRX0Cq'
 
-api = TikTokApi.get_instance()
+tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP)
 
-results = 10
+url = 'https://vm.tiktok.com/ZSKfUvw8/'
+headers = {
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
+    "accept": "*/*"}
 
-# diz = api.byUsername('squalordf')
-# print(api.search_for_music('ViolA - телепортируюсь', 1))
 
-# print(api.bySound('6889603433188296706', 1))
+diz = tt_api.byUsername('squalordf')
+print(tt_api.search_for_music('ViolA - телепортируюсь', 1))
+
+print(tt_api.bySound('6889603433188296706', 1))
 
 # diz = api.getUser('squalordf')
 # print(api.getUser('ugadai5'))
@@ -24,26 +28,7 @@ results = 10
 
 
 
-url = 'https://vm.tiktok.com/ZSKfUvw8/'
-headers = {
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
-    "accept": "*/*"}
 
-session = requests.Session()
-data = session.get(url=url, headers=headers)
-
-new_url = data.url
-
-link_parsed = url_parser.urlparse(new_url)
-path = link_parsed.path
-clip_id = path.split("/v/")[1].split('.')[0]
-
-clip = api.getTikTokById(clip_id)
-info = clip.get('itemInfo')
-struct = info.get('itemStruct')
-music = struct.get('music')
-music_id = music.get('id')
-print(music_id)
 
 
 # soup = BeautifulSoup(data.text, 'html.parser')

@@ -1,9 +1,9 @@
 import sqlite3
 import datetime
 import random
-from settings import *
+from config.settings import *
 
-conn = sqlite3.connect('data.db')
+conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\data.db')
 
 
 def is_user_in_db(id):
@@ -15,49 +15,49 @@ def add_user_to_db(id, **ref_father):
     if ref_father:
         ref_father = ref_father['ref_father']
         conn.execute(
-            '''INSERT INTO users(id, ref_father, balance, referals, alltime_subs, fine_count, alltime_get_subs) VALUES(?,?,?,?,?,?,?)''',
+            '''INSERT INTO users_old(id, ref_father, balance, referals, alltime_subs, fine_count, alltime_get_subs) VALUES(?,?,?,?,?,?,?)''',
             (id, ref_father, 0, str([]), 0, 0, 0))
-        referals_of_ref_father = conn.execute(f'''SELECT referals FROM users WHERE id = ?''', (ref_father,))
+        referals_of_ref_father = conn.execute(f'''SELECT referals FROM users_old WHERE id = ?''', (ref_father,))
         referals_of_ref_father = eval(referals_of_ref_father.fetchall()[0][0])
         referals_of_ref_father.append(id)
         referals_of_ref_father = str(referals_of_ref_father)
-        conn.execute(f'''UPDATE users SET referals = ? WHERE id = ?''', (referals_of_ref_father, ref_father,))
-        conn.execute('''UPDATE users SET balance = (balance + ?) WHERE id = ?''', (REF_BONUS, ref_father,))
+        conn.execute(f'''UPDATE users_old SET referals = ? WHERE id = ?''', (referals_of_ref_father, ref_father,))
+        conn.execute('''UPDATE users_old SET balance = (balance + ?) WHERE id = ?''', (REF_BONUS, ref_father,))
         conn.commit()
     else:
         conn.execute(
-            '''INSERT INTO users(id, ref_father, balance, referals, alltime_subs, fine_count, alltime_get_subs) VALUES(?,?,?,?,?,?,?)''',
+            '''INSERT INTO users_old(id, ref_father, balance, referals, alltime_subs, fine_count, alltime_get_subs) VALUES(?,?,?,?,?,?,?)''',
             (id, 0, 0, str([]), 0, 0, 0))
         conn.commit()
 
 
 def user_balance(user_id):
-    balance = conn.execute(f'''SELECT balance FROM users WHERE id = ?''', (user_id,))
+    balance = conn.execute(f'''SELECT balance FROM users_old WHERE id = ?''', (user_id,))
     balance = balance.fetchall()[0][0]
 
     return balance
 
 
 def alltime_subs(id):
-    subscriptions = conn.execute(f'''SELECT alltime_subs FROM users WHERE id = {id}''')
+    subscriptions = conn.execute(f'''SELECT alltime_subs FROM users_old WHERE id = {id}''')
     subscriptions = subscriptions.fetchall()[0][0]
     return subscriptions
 
 
 def alltime_get_subs(id):
-    subscriptions = conn.execute(f'''SELECT alltime_get_subs FROM users WHERE id = {id}''')
+    subscriptions = conn.execute(f'''SELECT alltime_get_subs FROM users_old WHERE id = {id}''')
     subscriptions = subscriptions.fetchall()[0][0]
     return subscriptions
 
 
 def fine_count(id):
-    count = conn.execute(f'''SELECT fine_count  FROM users WHERE id = {id}''')
+    count = conn.execute(f'''SELECT fine_count  FROM users_old WHERE id = {id}''')
     count = count.fetchall()[0][0]
     return count
 
 
 def referals(id):
-    count = conn.execute(f'''SELECT referals  FROM users WHERE id = {id}''')
+    count = conn.execute(f'''SELECT referals  FROM users_old WHERE id = {id}''')
     count = eval(count.fetchall()[0][0])
     count = len(count)
     return count
@@ -96,7 +96,7 @@ def confirm_order(number):
         id = prom_info[0][0]
         count = prom_info[0][1]
         conn.execute('''UPDATE channels SET status = 1 WHERE number = ?''', (number,))
-        conn.execute('''UPDATE users SET balance = balance - ? WHERE id = ?''', (count, id,))
+        conn.execute('''UPDATE users_old SET balance = balance - ? WHERE id = ?''', (count, id,))
         conn.commit()
         return 1
     except Exception as e:
@@ -140,7 +140,7 @@ def edit_promotion_status(number, status):
         delta = len(eval(sql_fetchall[0][2])) - sql_fetchall[0][3]
         delta = abs(delta) * 0.5
         delta = round(delta, 0)
-        conn.execute('''UPDATE users SET balance = balance + ? WHERE id = ?''', (delta, sql_fetchall[0][1],))
+        conn.execute('''UPDATE users_old SET balance = balance + ? WHERE id = ?''', (delta, sql_fetchall[0][1],))
         conn.commit()
         return sql_fetchall[0][1]
 
@@ -196,7 +196,7 @@ def add_user_to_subscribers(number, user_id):
         if len(subscriptions) < subs_count:
             subscriptions[user_id] = datetime.datetime.now()
             conn.execute('''UPDATE channels SET subscriptions = ? WHERE number = ?''', (str(subscriptions), number))
-            conn.execute('''UPDATE users SET balance = balance + 1 WHERE id = ?''', (user_id,))
+            conn.execute('''UPDATE users_old SET balance = balance + 1 WHERE id = ?''', (user_id,))
             conn.commit()
             return 1, sql_fetchall[0][2]
         else:
@@ -224,7 +224,7 @@ def check_channel_in_db(id):
 
 
 def get_users_for_mailing():
-    users = conn.execute('''SELECT id FROM users''')
+    users = conn.execute('''SELECT id FROM users_old''')
     return users.fetchall()
 
 
@@ -260,11 +260,11 @@ def uban_user(id, decision):
 
 
 def change_balance(id, value):
-    count = conn.execute('''SELECT COUNT(id) FROM users WHERE id = ?''', (id,))
+    count = conn.execute('''SELECT COUNT(id) FROM users_old WHERE id = ?''', (id,))
     if count.fetchall()[0][0] == 1:
         id = int(id)
         value = int(value)
-        conn.execute('''UPDATE users SET balance = balance + ? WHERE id = ?''', (value, id,))
+        conn.execute('''UPDATE users_old SET balance = balance + ? WHERE id = ?''', (value, id,))
         conn.commit()
         return 'Баланс пользователя был успешно изменён.'
     else:
@@ -327,5 +327,5 @@ def user_was_fine(number, id):
 
 
 def increase_fine_count(id):
-    conn.execute('''UPDATE users SET fine_count = fine_count - ? WHERE id = ?''', (FINE_FOR_UNSUBSCRIBING, id,))
+    conn.execute('''UPDATE users_old SET fine_count = fine_count - ? WHERE id = ?''', (FINE_FOR_UNSUBSCRIBING, id,))
     conn.commit()

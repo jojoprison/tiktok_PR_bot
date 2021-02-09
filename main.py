@@ -1,13 +1,14 @@
-from settings import *
-from messages import *
-from functions import *
-from functions_2_tt import *
+from utility.messages import *
+from config.settings import *
+from payment.qiwi.qiwi import *
+from functional.functions_tt import *
+from functional.functions_old import *
 import random
 import urllib.parse as url_parser
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
-from aiogram.utils.helper import Helper, HelperMode, ListItem
+from aiogram.utils.helper import Helper, ListItem
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, \
@@ -18,7 +19,7 @@ from aiogram.utils.exceptions import Unauthorized
 
 loop = asyncio.get_event_loop()
 
-bot = Bot(token=token, loop=loop)
+bot = Bot(token=BOT_TOKEN, loop=loop)
 
 dp = Dispatcher(bot, storage=MemoryStorage())
 
@@ -125,19 +126,23 @@ async def start_commands_handle(m: types.Message):
         await m.reply(UPDATE, reply=False, parse_mode='HTML', reply_markup=main_menu)
 
 
-@dp.message_handler(lambda m: m.from_user.id in admins, commands=['admin'])
+@dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, commands=['admin'])
 async def admin_command_handle(m: types.Message):
     await m.reply(SELECT_ADMIN_MENU_BUTTON, reply=False, reply_markup=admin_menu)
 
 
-@dp.message_handler(lambda m: m.from_user.id not in admins, commands=['admin'])
+@dp.message_handler(lambda m: m.from_user.id not in BOT_ADMINS, commands=['admin'])
 async def handle_not_admin(m: types.Message):
     await m.reply(YOU_WAS_HACK_ME, reply=False)
 
 
-@dp.message_handler(lambda m: m.text == '👤 Профиль' and user_banned(m.from_user.id) is False)
+@dp.message_handler(lambda m: m.text == '👤 Профиль')
 async def profile_button_handle(m: types.Message):
-    await m.reply(PROFILE(m), reply=False, parse_mode='HTML')
+    top_up_balance = InlineKeyboardMarkup()
+    top_up_balance.add(
+        InlineKeyboardButton(text='Пополнить баланс', callback_data='top_up_balance'))
+
+    await m.reply(PROFILE(m), reply=False, parse_mode='HTML', reply_markup=top_up_balance)
 
 
 @dp.message_handler(lambda m: m.text == 'Заказать')
@@ -154,18 +159,20 @@ async def tt_video_handle(m: types.Message):
             clip_link = m.text
 
             if valid_tt_link(clip_link):
-                clip_data = get_music_id_from_clip_tt(clip_link)
-                clip_id = clip_data.get('clip_id')
-                music_id = clip_data.get('music_id')
-
-                # TODO сохранять видос/линк на него в БД
-                clip_id = save_tt_clip(client=m.from_user.id, clip_link=clip_link,
-                                       clip_id=clip_id, music_id=music_id)
+                # TODO заглушка
+                # clip_data = get_music_id_from_clip_tt(clip_link)
+                # clip_id = clip_data.get('clip_id')
+                # music_id = clip_data.get('music_id')
+                #
+                # # TODO сохранять видос/линк на него в БД
+                # clip_id = save_tt_clip(client=m.from_user.id, clip_link=clip_link,
+                #                        clip_id=clip_id, music_id=music_id)
 
                 cancel_promotion = InlineKeyboardMarkup()
                 # TODO добавить эту штуку для удаления видоса в случае нажатия кнопки отмена
                 cancel_promotion.add(
-                    InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(clip_id)))
+                    # TODO изменить clip_id в str(0)
+                    InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(0)))
 
                 await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
                 await m.reply(SEND_CLIP_COUNT(m.from_user.id, clip_link), reply=False, parse_mode='HTML',
@@ -321,56 +328,6 @@ async def get_money(m):
         await m.reply(NO_TT_VIDEO_TO_PROMO, reply=False)
 
 
-# TODO старое
-@dp.message_handler(lambda m: m.text == '➕ Получить подписчиков' and user_banned(m.from_user.id) == False)
-async def add_channel_handle(m: types.Message):
-    if user_balance(m.from_user.id) >= LITTLE_SUBCOIN_TO_GET_SUBS:
-        state = dp.current_state(user=m.from_user.id)
-        await state.set_state('GET_CHANNEL_TO_UP')
-        await m.reply(GIVE_CHANNEL_LINK, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
-    else:
-        await m.reply(LITTLE_SUBCOIN_1, reply=False)
-
-
-# TODO старое (чекает подписчиков в канале)
-@dp.message_handler(state='GET_CHANNEL_TO_UP')
-async def channel_to_up_handle(m: types.Message):
-    try:
-
-        if m.content_type == 'text':
-            my_id = await bot.get_me()
-            get_channel = await bot.get_chat(m.text)
-
-            if get_channel.type == 'channel':
-                status_bot_in_channel = await bot.get_chat_member(chat_id=m.text, user_id=my_id.id)
-                if check_channel_in_db(get_channel.id) == 1:
-                    if status_bot_in_channel.status == 'administrator':
-                        number = save_channel(channel_id=get_channel.id, writer=m.from_user.id)
-                        cancel_promotion = InlineKeyboardMarkup()
-                        cancel_promotion.add(
-                            InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(number)))
-                        await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
-                        await m.reply(SEND_SUB_COUNT_1(m), reply=False, parse_mode='Markdown',
-                                      reply_markup=cancel_promotion)
-                        state = dp.current_state(user=m.from_user.id)
-
-                        await state.set_state('GET_SUB_COUNT')
-                    else:
-                        await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
-                        await m.reply(BOT_NOT_IN_CHANNEL, parse_mode='Markdown', reply_markup=cancel_menu)
-                elif check_channel_in_db(get_channel.id) == 0:
-                    await m.reply(CHANNEL_ON_PROMOTION_2, reply=False, reply_markup=cancel_menu)
-            else:
-                await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
-                await m.reply(THIS_IS_NOT_CHANNEL, parse_mode='Markdown', reply_markup=cancel_menu)
-        else:
-
-            await m.reply(THIS_IS_NOT_TEXT, parse_mode='Markdown', reply_markup=cancel_menu)
-
-    except Exception as e:
-        await m.reply(e, reply_markup=cancel_menu)
-
-
 # TODO доделать покупку клипов
 @dp.message_handler(state='SEND_CLIP_COUNT')
 async def handle_send_clip_count(m: types.Message):
@@ -471,6 +428,46 @@ async def sent_instruction_for_subscribe(m: types.Message):
             break
 
 
+# пополнение баланса
+@dp.message_handler(content_types=['text'], state='TOP_UP_BALANCE')
+async def send_mail(m: types.Message):
+    if m.content_type == 'text':
+        money_amount = m.text
+
+        add_user_payment(m.from_user.id, money_amount)
+
+        state = dp.current_state(user=m.from_user.id)
+        await state.set_state('ORDER_PAYMENT')
+        await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+
+        # TODO сообщение с информацией об оплате заказа
+        await m.reply(
+            CONFIRM_ADDING_VIDEO_TO_PROMO(video_to_promo_count, video_to_promo_count * CASH_MIN),
+            reply=False,
+            reply_markup=confirmation_menu)
+    else:
+        pass
+
+    else:
+        state = dp.current_state(user=m.from_user.id)
+        await state.reset_state()
+
+
+@dp.message_handler(state='ORDER_PAYMENT')
+async def send_mail(m: types.Message):
+    check_payment(m.from_user.id)
+
+    state = dp.current_state(user=m.from_user.id)
+    await state.set_state('ORDER_PAYMENT')
+    await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+
+    # TODO сообщение с информацией об оплате заказа
+    await m.reply(
+        CONFIRM_ADDING_VIDEO_TO_PROMO(video_to_promo_count, video_to_promo_count * CASH_MIN),
+        reply=False,
+        reply_markup=confirmation_menu)
+
+
 # админская способность рассылки
 @dp.message_handler(content_types=['text', 'video', 'photo', 'document', 'animation'], state='GET_MSG_FOR_MAIL')
 async def send_mail(m: types.Message):
@@ -541,7 +538,7 @@ async def referal_button_handle(m: types.Message):
                   parse_mode='HTML')
 
 
-@dp.message_handler(lambda m: m.from_user.id in admins, content_types=['text'], state='GET_USER_FOR_CHB')
+@dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, content_types=['text'], state='GET_USER_FOR_CHB')
 async def handle_user_for_chb(m: types.Message):
     list = m.text.split(' ')
     if len(list) == 2:
@@ -558,7 +555,7 @@ async def handle_user_for_chb(m: types.Message):
     await state.reset_state()
 
 
-@dp.message_handler(lambda m: m.from_user.id in admins, content_types=['text'], state='GET_USER_FOR_UBAN')
+@dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, content_types=['text'], state='GET_USER_FOR_UBAN')
 async def handle_user_for_uban(m: types.Message):
     list = m.text.split(' ')
     if len(list) == 2:
@@ -588,9 +585,9 @@ async def cancel_button_handle(c: types.callback_query):
 @dp.callback_query_handler(lambda c: 'cancel_' in c.data,
                            state=['CONFIRMATION', 'GET_SUB_COUNT', 'SEND_CLIP_COUNT', 'GET_TT_VIDEO'])
 async def cancel_wnum_button_handler(c: types.callback_query):
-    number = c.data.replace('cancel_', '')
+    clip_id = c.data.replace('cancel_', '')
 
-    status = delete_tt_video_from_db(number)
+    status = delete_tt_video_from_db(clip_id)
 
     if status == 0:
         await c.message.edit_text(TT_VIDEO_ON_PROMOTION)
@@ -635,6 +632,7 @@ async def confirm_button_handler(c: types.callback_query):
         await state.reset_state()
 
 
+# TODO старое ПЕРЕДЕЛАТЬ
 @dp.callback_query_handler(lambda c: 'sub_' in c.data)
 async def check_user_in_channel(c: types.CallbackQuery):
     number = c.data.replace('sub_', '')
@@ -761,6 +759,14 @@ async def handle_uban_button(c: types.CallbackQuery):
     await c.message.edit_text(SEND_USER_FOR_UBAN, reply_markup=cancel_menu)
     state = dp.current_state(user=c.from_user.id)
     await state.set_state('GET_USER_FOR_UBAN')
+
+
+# TODO дописать пополнение
+@dp.callback_query_handler(lambda c: c.data == 'top_up_balance')
+async def handle_uban_button(c: types.CallbackQuery):
+    await c.message.edit_text(TOP_UP_BALANCE, reply_markup=cancel_menu)
+    state = dp.current_state(user=c.from_user.id)
+    await state.set_state('TOP_UP_BALANCE')
 
 
 @dp.callback_query_handler(lambda c: c.data == 'chb')
