@@ -141,7 +141,8 @@ async def handle_not_admin(m: types.Message):
 async def profile_button_handle(m: types.Message):
     top_up_balance = InlineKeyboardMarkup()
     top_up_balance.add(
-        InlineKeyboardButton(text='Пополнить баланс', callback_data='top_up_balance'))
+        InlineKeyboardButton(text='Пополнить баланс', callback_data='top_up_balance'),
+        InlineKeyboardButton(text='Вывести средства', callback_data='withdraw_funds'))
 
     await m.reply(PROFILE(m), reply=False, parse_mode='HTML', reply_markup=top_up_balance)
 
@@ -458,6 +459,63 @@ async def top_up_balance(m: types.Message):
         await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
 
         await m.reply(WRONG_MONEY_AMOUNT, reply=False, reply_markup=cancel_menu)
+
+
+# проверка данных для вывода средств
+@dp.message_handler(content_types=types.ContentType.ANY, state='WITHDRAW_FUNDS_VALIDATION')
+async def withdraw_funds_validation(m: types.Message):
+    user_id = m.from_user.id
+    bot_last_message_id = m.message_id - 1
+
+    if m.content_type == 'text':
+        funds_amount = m.text
+
+        try:
+            funds_amount = int(funds_amount)
+
+            # TODO придумать че делать, когда отправляется список объектов
+            await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+            # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+
+            state = dp.current_state(user=user_id)
+            await state.set_state('WITHDRAW_FUNDS_WHERE')
+
+            await m.reply(WITHDRAW_FUNDS_WHERE(funds_amount),
+                          reply=False, reply_markup=cancel_menu)
+        except ValueError:
+            await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+            await m.reply(WRONG_WITHDRAW_FUNDS, reply=False, reply_markup=cancel_menu)
+    else:
+        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+        await m.reply(WRONG_WITHDRAW_FUNDS, reply=False, reply_markup=cancel_menu)
+
+
+# выбор способа вывода средств
+@dp.message_handler(content_types=types.ContentType.ANY, state='WITHDRAW_FUNDS_WHERE')
+async def withdraw_funds_location(m: types.Message):
+    user_id = m.from_user.id
+    bot_last_message_id = m.message_id - 1
+
+    if m.content_type == 'text':
+        withdraw_funds_location = m.text
+
+        # TODO придумать проверку номера телефона или банковской карты
+
+        # TODO FSM https://docs.aiogram.dev/en/latest/examples/finite_state_machine_example.html
+
+
+        # TODO придумать че делать, когда отправляется список объектов
+        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+        # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+
+        state = dp.current_state(user=user_id)
+        await state.set_state('WITHDRAW_FUNDS_SUCCESS_QUESTION')
+
+        await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_location),
+                      reply=False, reply_markup=cancel_menu)
+    else:
+        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+        await m.reply(WRONG_WITHDRAW_FUNDS_LOCATION, reply=False, reply_markup=cancel_menu)
 
 
 # админская способность рассылки
@@ -784,6 +842,18 @@ async def handle_uban_button(c: types.CallbackQuery):
     # await c.message.edit_text(TOP_UP_BALANCE, reply_markup=cancel_menu)
     state = dp.current_state(user=c.from_user.id)
     await state.set_state('TOP_UP_BALANCE')
+
+
+# TODO дописать пополнение
+@dp.callback_query_handler(lambda c: c.data == 'withdraw_funds')
+async def handle_uban_button(c: types.CallbackQuery):
+    user_id = c.from_user.id
+    balance = tt_user_balance(user_id=user_id)
+
+    await c.message.reply(WITHDRAW_FUNDS(balance), reply=False, parse_mode='HTML', reply_markup=cancel_menu)
+
+    state = dp.current_state(user=user_id)
+    await state.set_state('WITHDRAW_FUNDS_VALIDATION')
 
 
 @dp.callback_query_handler(lambda c: c.data == 'chb')

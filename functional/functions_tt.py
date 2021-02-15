@@ -337,4 +337,3 @@ def deposit_money_to_balance(user_id, payment_amount):
 
     cur.execute('''UPDATE users SET balance = ? WHERE id = ?''', (user_new_balance, user_id))
     conn.commit()
-
