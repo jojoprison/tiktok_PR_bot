@@ -22,6 +22,13 @@ def create_user_payment_table():
     conn.commit()
 
 
+def create_withdraw_funds_table():
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS withdraw_funds(withdraw_id INTEGER PRIMARY KEY, user_id INTEGER, "
+                "funds_amount INTEGER, status INTEGER, date TIMESTAMP)")
+    conn.commit()
+
+
 def add_user_payment(user_id, money_amount):
     payment_comment = generate_comment(user_id)
 
@@ -39,6 +46,22 @@ def add_user_payment(user_id, money_amount):
     conn.commit()
 
     return payment_comment, payment_id
+
+
+def add_withdraw_funds(user_id, funds_amount):
+    cur = conn.cursor()
+    cur.execute(
+        '''INSERT INTO withdraw_funds(user_id, funds_amount, status, date) 
+        VALUES(?,?,?,?)''', (user_id, funds_amount, 0, datetime.datetime.now()))
+    # забираем последнюю запись об оплате из таблицы
+    withdraw_id = cur.execute('''SELECT MAX(withdraw_id) FROM withdraw_funds''').fetchall()[0][0]
+
+    # cur.execute(
+    #     '''INSERT INTO user_payments(user_id, payment_id)
+    #     VALUES(?,?)''', (user_id, payment_id))
+    # conn.commit()
+
+    return withdraw_id
 
 
 def view_payment(payment_id):
@@ -88,6 +111,7 @@ def qiwi_req():
 
 if __name__ == '__main__':
     # create_table()
-    create_user_payment_table()
+    # create_user_payment_table()
+    create_withdraw_funds_table()
     # add_user(12)
     # check_payment(12)

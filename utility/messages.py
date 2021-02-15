@@ -17,6 +17,11 @@ WRONG_TT_CLIP_LINK = 'Неправильная ссылка на тт клип, 
 
 WRONG_MONEY_AMOUNT = 'Неверное введено количество желаемых денег к оплате. Пожалуйста, повторите ввод:'
 
+WRONG_WITHDRAW_FUNDS = 'Неверное введено количество желаемых средств к выводу. ' \
+                       'Пожалуйста, повторите ввод:'
+
+WRONG_WITHDRAW_FUNDS_LOCATION = 'Неверное введен номер телефона или номер карты для вывода средств. ' \
+                       'Пожалуйста, повторите ввод:'
 
 def SEND_CLIP_COUNT(user_id, link):
     balance = user_balance_tt(user_id)
@@ -191,6 +196,29 @@ def MAILING_END(all, die):
 
 # TODO допилить инструкцию
 TOP_UP_BALANCE = 'Инструкция для пополнения баланса:\nВведите сколько хотите закинуть!'
+
+
+def WITHDRAW_FUNDS(balance):
+    message = f'Вывод средств доступен при наличии 200 RUB на балансе.\n' \
+              f'На вашем счету сейчас {balance} RUB\n\n' \
+              f'Напишите сумму, которую хотите вывести:'
+
+    return message
+
+
+def WITHDRAW_FUNDS_WHERE(funds_amount):
+    message = f'Отлично! Вы хотите вывести {funds_amount} с вашего аккаунта.\n' \
+              f'Укажите номер телефона для вывода через QIWI Wallet или номер карты для перевода через банк:'
+
+    return message
+
+
+def WITHDRAW_FUNDS_SUCCESS_QUESTION(user_id, funds_amount):
+    message = f'Отлично! Вы хотите вывести {funds_amount} с вашего аккаунта.\n' \
+              f'Укажите номер телефона для вывода через QIWI Wallet или номер карты для перевода через банк:'
+
+    return message
+
 
 SEND_USER_FOR_UBAN = '❓Для бана человека отправьте:\n\n<Id человека которого нужно забанить> 0\n\n❓Для разбана человека отправьте:\n\n<Id человека которого нужно разбанить> 1'
 
