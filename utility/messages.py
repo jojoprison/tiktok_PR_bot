@@ -213,9 +213,8 @@ def WITHDRAW_FUNDS_WHERE(funds_amount):
     return message
 
 
-def WITHDRAW_FUNDS_SUCCESS_QUESTION(user_id, funds_amount):
-    message = f'Отлично! Вы хотите вывести {funds_amount} с вашего аккаунта.\n' \
-              f'Укажите номер телефона для вывода через QIWI Wallet или номер карты для перевода через банк:'
+def WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_location):
+    message = f'Подтвердите точку вывода средств:\n{withdraw_funds_location}'
 
     return message
 
