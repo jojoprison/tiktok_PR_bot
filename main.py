@@ -497,21 +497,50 @@ async def withdraw_funds_location(m: types.Message):
     bot_last_message_id = m.message_id - 1
 
     if m.content_type == 'text':
-        withdraw_funds_location = m.text
+        withdraw_funds_loc = m.text
 
         # TODO придумать проверку номера телефона или банковской карты
 
+        # TODO доделать передачи инфы в стейтах
         # TODO FSM https://docs.aiogram.dev/en/latest/examples/finite_state_machine_example.html
-
-
-        # TODO придумать че делать, когда отправляется список объектов
-        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
-        # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
-
         state = dp.current_state(user=user_id)
         await state.set_state('WITHDRAW_FUNDS_SUCCESS_QUESTION')
 
-        await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_location),
+        # TODO придумать че делать, когда отправляется список объектов
+        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+
+        await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_loc),
+                      reply=False, reply_markup=cancel_menu)
+    else:
+        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+        await m.reply(WRONG_WITHDRAW_FUNDS_LOCATION, reply=False, reply_markup=cancel_menu)
+
+
+# выбор способа вывода средств
+@dp.message_handler(content_types=types.ContentType.ANY, state='WITHDRAW_FUNDS_SUCCESS_QUESTION')
+async def withdraw_funds_question(m: types.Message):
+    user_id = m.from_user.id
+    bot_last_message_id = m.message_id - 1
+
+    if m.content_type == 'text':
+        withdraw_funds_loc = m.text
+
+        # TODO придумать проверку номера телефона или банковской карты
+
+        # TODO доделать передачи инфы в стейтах
+        # TODO FSM https://docs.aiogram.dev/en/latest/examples/finite_state_machine_example.html
+        state = dp.current_state(user=user_id)
+        await state.set_state('WITHDRAW_FUNDS_SUCCESS_QUESTION')
+
+        # TODO придумать че делать, когда отправляется список объектов
+        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+
+        payment_menu = InlineKeyboardMarkup()
+        payment_menu.add(
+            InlineKeyboardButton(text='Вывести', callback_data='check_payment_' + str(payment_id)),
+            InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+
+        await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_loc),
                       reply=False, reply_markup=cancel_menu)
     else:
         await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
