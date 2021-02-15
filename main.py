@@ -1,6 +1,7 @@
 from utility.messages import *
 from config.settings import *
-from payment.qiwi.qiwi import *
+from payment.qiwi.payment import *
+from payment.qiwi.comment_generation import *
 from functional.functions_tt import *
 from functional.functions_old import *
 import random
@@ -163,8 +164,8 @@ async def tt_video_handle(m: types.Message):
                 # clip_data = get_music_id_from_clip_tt(clip_link)
                 # clip_id = clip_data.get('clip_id')
                 # music_id = clip_data.get('music_id')
-                #
-                # # TODO сохранять видос/линк на него в БД
+                # #
+                # # # TODO сохранять видос/линк на него в БД
                 # clip_id = save_tt_clip(client=m.from_user.id, clip_link=clip_link,
                 #                        clip_id=clip_id, music_id=music_id)
 
@@ -429,43 +430,34 @@ async def sent_instruction_for_subscribe(m: types.Message):
 
 
 # пополнение баланса
-@dp.message_handler(content_types=['text'], state='TOP_UP_BALANCE')
-async def send_mail(m: types.Message):
+@dp.message_handler(content_types=types.ContentType.ANY, state='TOP_UP_BALANCE')
+async def top_up_balance(m: types.Message):
+    user_id = m.from_user.id
+    bot_last_message_id = m.message_id - 1
+
     if m.content_type == 'text':
         money_amount = m.text
 
-        add_user_payment(m.from_user.id, money_amount)
+        payment_info = add_user_payment(user_id, money_amount)
+        payment_comment = payment_info[0]
+        payment_id = payment_info[1]
 
-        state = dp.current_state(user=m.from_user.id)
-        await state.set_state('ORDER_PAYMENT')
-        await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+        # TODO придумать че делать, когда отправляется список объектов
+        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+        # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
 
-        # TODO сообщение с информацией об оплате заказа
+        payment_menu = InlineKeyboardMarkup()
+        payment_menu.add(
+            InlineKeyboardButton(text='Проверить оплату', callback_data='check_payment_' + str(payment_id)),
+            InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+
         await m.reply(
-            CONFIRM_ADDING_VIDEO_TO_PROMO(video_to_promo_count, video_to_promo_count * CASH_MIN),
-            reply=False,
-            reply_markup=confirmation_menu)
+            MONEYS(money_amount, payment_comment),
+            reply=False, reply_markup=payment_menu)
     else:
-        pass
+        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
 
-    else:
-        state = dp.current_state(user=m.from_user.id)
-        await state.reset_state()
-
-
-@dp.message_handler(state='ORDER_PAYMENT')
-async def send_mail(m: types.Message):
-    check_payment(m.from_user.id)
-
-    state = dp.current_state(user=m.from_user.id)
-    await state.set_state('ORDER_PAYMENT')
-    await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
-
-    # TODO сообщение с информацией об оплате заказа
-    await m.reply(
-        CONFIRM_ADDING_VIDEO_TO_PROMO(video_to_promo_count, video_to_promo_count * CASH_MIN),
-        reply=False,
-        reply_markup=confirmation_menu)
+        await m.reply(WRONG_MONEY_AMOUNT, reply=False, reply_markup=cancel_menu)
 
 
 # админская способность рассылки
@@ -616,6 +608,30 @@ async def cancel_tt_acc_button_handler(c: types.callback_query):
         await state.reset_state()
 
 
+@dp.callback_query_handler(lambda c: 'check_payment_' in c.data, state='TOP_UP_BALANCE')
+async def confirm_button_handler(c: types.callback_query):
+    payment_id = c.data.replace('check_payment_', '')
+    user_id = c.from_user.id
+
+    payment = view_payment(payment_id)
+    payment_status = payment[0]
+    payment_amount = payment[1]
+
+    print('user ' + str(user_id) + ' - ' + str(payment_id) + ': payed ' + str(payment_amount) +
+          ' with status ' + str(payment_status))
+
+    # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+
+    if payment_status == 1:
+        await c.message.edit_text(MONEY_EARNED)
+        deposit_money_to_balance(user_id, payment_amount)
+    else:
+        await c.message.edit_text(MONEY_NOT_EARNED)
+
+    state = dp.current_state(user=c.from_user.id)
+    await state.reset_state()
+
+
 @dp.callback_query_handler(lambda c: 'confirm_' in c.data, state='CONFIRMATION')
 async def confirm_button_handler(c: types.callback_query):
     clip_number = c.data.replace('confirm_', '')
@@ -764,7 +780,8 @@ async def handle_uban_button(c: types.CallbackQuery):
 # TODO дописать пополнение
 @dp.callback_query_handler(lambda c: c.data == 'top_up_balance')
 async def handle_uban_button(c: types.CallbackQuery):
-    await c.message.edit_text(TOP_UP_BALANCE, reply_markup=cancel_menu)
+    await c.message.reply(TOP_UP_BALANCE, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
+    # await c.message.edit_text(TOP_UP_BALANCE, reply_markup=cancel_menu)
     state = dp.current_state(user=c.from_user.id)
     await state.set_state('TOP_UP_BALANCE')
 

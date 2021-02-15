@@ -39,6 +39,8 @@ def check_payment(user_id):
     # получаем запрос
     req = qiwi_req()
     print(req)
+    print(req['data'][0]['comment'])
+    print(req['data'][0]['sum']['amount'])
 
     # проходимся циклом по словарю
     for i in range(len(req['data'])):
@@ -56,14 +58,13 @@ def qiwi_req():
     s.headers['authorization'] = 'Bearer ' + QIWI_TOKEN
     parameters = {'rows': '50'}
 
-    h = s.get('https://edge.qiwi.com/payment-history/v1/persons/' + QIWI_ACCOUNT + '/payments',
+    h = s.get('https://edge.qiwi.com/payment-history/v2/persons/' + QIWI_ACCOUNT + '/payments',
               params=parameters)
-    req = json.loads(h.text)
 
-    return req
+    return h.json()
 
 
 if __name__ == '__main__':
-    create_table()
+    # create_table()
     # add_user(12)
     check_payment(12)
