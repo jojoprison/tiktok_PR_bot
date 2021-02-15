@@ -291,7 +291,7 @@ async def check_clip_for_paying(user_id, video_id):
 
 
 def get_music_id_from_clip_tt(short_clip_url):
-    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP)
+    tt_api = TikTokApi.get_instance(use_selenium=True, custom_verifyFp=TT_VERIFY_FP)
 
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
@@ -323,3 +323,18 @@ def get_clip_id_from_url(url):
         clip_id = url_parts[2].split('.')[0]
 
     return clip_id
+
+
+def deposit_money_to_balance(user_id, payment_amount):
+    cur = conn.cursor()
+
+    user_balance = conn.execute(f'''SELECT balance FROM users WHERE id = ?''', (user_id,))
+    user_balance = user_balance.fetchall()[0][0]
+
+    print(type(user_balance))
+    print(user_balance)
+    user_new_balance = user_balance + payment_amount
+
+    cur.execute('''UPDATE users SET balance = ? WHERE id = ?''', (user_new_balance, user_id))
+    conn.commit()
+
