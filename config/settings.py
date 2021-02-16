@@ -6,8 +6,8 @@ BOT_ADMINS = [92957440, 450914065]
 # минимум бабок для раскрутки трека (1 клип)
 CASH_MIN = 10
 
-# реферальный бонус (сабкоины)
-REF_BONUS = 2
+# реферальный бонус (рубли)
+REF_BONUS = 1
 
 FINE_FOR_UNSUBSCRIBING = -5 #Число должно быть отрицательным и целым
 
@@ -21,4 +21,4 @@ LINK_TO_INTRODUCTION_AND_RULES = 'https://graph.org/Vvedenie-v-bota-a-takzhe-pra
 LINK_TO_CHAT_OF_BOT = '@sqDfs'
 
 # TODO куки для тиктока (обновлять)
-TT_VERIFY_FP = 'verify_kh96hlyt_z40z1rRE_jkcF_4HXZ_AABt_wf2Q6wPRX0Cq'
+TT_VERIFY_FP = 'verify_kerlbryp_wMxNwgNV_U325_4kmy_9vQy_PWkD5xiy6GNX'

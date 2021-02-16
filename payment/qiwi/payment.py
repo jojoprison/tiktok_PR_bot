@@ -54,14 +54,34 @@ def add_withdraw_funds(user_id, funds_amount):
         '''INSERT INTO withdraw_funds(user_id, funds_amount, status, date) 
         VALUES(?,?,?,?)''', (user_id, funds_amount, 0, datetime.datetime.now()))
     # забираем последнюю запись об оплате из таблицы
+    conn.commit()
+    # withdraw_id = cur.execute('''SELECT MAX(withdraw_id) FROM withdraw_funds''').fetchall()[0][0]
+
+    # return withdraw_id
+
+
+def get_last_withdraw():
+    cur = conn.cursor()
     withdraw_id = cur.execute('''SELECT MAX(withdraw_id) FROM withdraw_funds''').fetchall()[0][0]
 
-    # cur.execute(
-    #     '''INSERT INTO user_payments(user_id, payment_id)
-    #     VALUES(?,?)''', (user_id, payment_id))
-    # conn.commit()
-
     return withdraw_id
+
+
+def update_withdraw_status(withdraw_id, new_status):
+    cur = conn.cursor()
+    cur.execute('''UPDATE withdraw_funds SET status = ? WHERE withdraw_id = ?''', (new_status, withdraw_id))
+    conn.commit()
+
+    return True
+
+
+def update_withdraw_location(withdraw_id, location, number):
+    cur = conn.cursor()
+    cur.execute('''UPDATE withdraw_funds SET location = ?, number = ? WHERE withdraw_id = ?''',
+                (location, number, withdraw_id))
+    conn.commit()
+
+    return True
 
 
 def view_payment(payment_id):
