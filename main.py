@@ -38,7 +38,7 @@ class UserStates(Helper):
 
 main_menu = ReplyKeyboardMarkup(resize_keyboard=True)
 main_menu.add('Заработать', 'Заказать')
-main_menu.add('👤 Профиль')
+main_menu.add('👤 Профиль', 'Партнёрская программа')
 
 admin_menu = InlineKeyboardMarkup()
 statistics_bt = InlineKeyboardButton(text='📊 Статистика', callback_data='stat')
@@ -121,10 +121,25 @@ async def start_commands_handle(m: types.Message):
     await state.reset_state()
 
     if is_user_in_db_tt(m.from_user.id) < 1:
-        add_user_to_db_tt(m.from_user.id)
-        await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
+        argument = m.get_args()
+        if (argument is not None) and (argument.isdigit() is True) and (is_user_in_db_tt(argument)) == 1:
+            add_user_to_db_tt(m.from_user.id, ref_father=argument)
+
+            await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
+            await bot.send_message(text=NEW_REFERRAL(argument), chat_id=argument)
+        else:
+            add_user_to_db_tt(m.from_user.id)
+            await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
     else:
         await m.reply(UPDATE, reply=False, parse_mode='HTML', reply_markup=main_menu)
+
+
+@dp.message_handler(commands=['help'])
+async def start_commands_handle(m: types.Message):
+    state = dp.current_state(user=m.from_user.id)
+    await state.reset_state()
+
+    await m.reply(HELP, reply=False, parse_mode='HTML', reply_markup=main_menu)
 
 
 @dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, commands=['admin'])
@@ -162,13 +177,13 @@ async def tt_video_handle(m: types.Message):
 
             if valid_tt_link(clip_link):
                 # TODO заглушка
-                # clip_data = get_music_id_from_clip_tt(clip_link)
-                # clip_id = clip_data.get('clip_id')
-                # music_id = clip_data.get('music_id')
-                # #
-                # # # TODO сохранять видос/линк на него в БД
-                # clip_id = save_tt_clip(client=m.from_user.id, clip_link=clip_link,
-                #                        clip_id=clip_id, music_id=music_id)
+                clip_data = get_music_id_from_clip_tt(clip_link)
+                clip_id = clip_data.get('clip_id')
+                music_id = clip_data.get('music_id')
+                #
+                # # TODO сохранять видос/линк на него в БД
+                clip_id = save_tt_clip(client=m.from_user.id, clip_link=clip_link,
+                                       clip_id=clip_id, music_id=music_id)
 
                 cancel_promotion = InlineKeyboardMarkup()
                 # TODO добавить эту штуку для удаления видоса в случае нажатия кнопки отмена
@@ -246,13 +261,14 @@ def tt_acc_not_exist(user_id):
 async def sent_instruction_for_get_money(m: types.Message):
     user_id = m.from_user.id
 
-    if (tt_acc_not_exist(user_id)):
+    if tt_acc_not_exist(user_id):
         state = dp.current_state(user=user_id)
         await state.set_state('REG_TT_ACCOUNT')
         await m.reply(TT_ACCOUNT, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
     else:
         # проверяем работу юзернейма TT акка
-        update_tt_acc_username(user_id)
+        # TODO Добавить глобальный таймер от которого будет почти все зависеть в проге и убрать вот эту хуйню отсюда засунуть в таймер
+        # update_tt_acc_username(user_id)
         await get_money(m)
 
 
@@ -313,7 +329,7 @@ async def get_money(m):
         tt_menu = InlineKeyboardMarkup()
         tt_menu.add(InlineKeyboardButton(text='Перейти к TT видео с треком', url=tt_video_link))
         # video_list[tt_video_link] передаем id из БД
-        # TODO потом сделать метод проверки видоса через TT API
+        # TODO потом сделать метод проверки видоса через TT API СДЕЛАТЬ ПЕРЕДЫШКУ 1-2мин и потом пополнять баланс
         tt_menu.add(InlineKeyboardButton(text='Проверить', callback_data='check_clip_' + str(
             video_list[tt_video_link])))
         # TODO Доделать пропуск чтоб обновляло кнопки со списком видосов
@@ -393,43 +409,6 @@ async def handle_get_sub_count(m: types.Message):
         await m.reply(LITTLE_SUBCOIN_2, reply=False, reply_markup=cancel_wnum_menu)
 
 
-@dp.message_handler(lambda m: m.text == '✔️ Подписаться на канал' and user_banned(m.from_user.id) == False)
-async def sent_instruction_for_subscribe(m: types.Message):
-    black_list = []
-    while True:
-        channels_list = channel_for_subscribe(m.from_user.id)
-        if channels_list != 0 and len(channels_list) > len(black_list):
-            channel_to_subscribe = random.choice(list(channels_list))
-            if channel_to_subscribe not in black_list:
-                my_id = await bot.get_me()
-                try:
-                    bot_status = await bot.get_chat_member(chat_id=channel_to_subscribe, user_id=my_id.id)
-                    bot_status = bot_status.status
-                except (Unauthorized, BotBlocked):
-                    bot_status = 'left'
-
-                if bot_status == "administrator":
-                    status_of_user = await bot.get_chat_member(chat_id=channel_to_subscribe, user_id=m.from_user.id)
-                    if status_of_user.status == 'left':
-                        username = await bot.get_chat(chat_id=channel_to_subscribe)
-                        subscribe_menu = InlineKeyboardMarkup()
-                        subscribe_menu.add(InlineKeyboardButton(text='Перейти к каналу',
-                                                                url='tg://resolve?domain=' + username.username))
-                        subscribe_menu.add(InlineKeyboardButton(text='Проверить подписку', callback_data='sub_' + str(
-                            channels_list[channel_to_subscribe])))
-                        await m.reply(SUBSCRIBE_ON_THIS_CHANNEL, reply_markup=subscribe_menu, reply=False)
-                        break
-                    else:
-                        black_list.append(channel_to_subscribe)
-                else:
-                    writer = edit_promotion_status(channels_list[channel_to_subscribe], 0)
-                    id = channel_to_subscribe
-                    await bot.send_message(writer, CHANNEL_WAS_DEL_FROM_CHANNEL(id, LINK_TO_INTRODUCTION_AND_RULES))
-        else:
-            await m.reply(NO_HAVE_CHANNELS_FOR_SUBSCRIBE, reply=False)
-            break
-
-
 # пополнение баланса
 @dp.message_handler(content_types=types.ContentType.ANY, state='TOP_UP_BALANCE')
 async def top_up_balance(m: types.Message):
@@ -473,12 +452,14 @@ async def withdraw_funds_validation(m: types.Message):
         try:
             funds_amount = int(funds_amount)
 
+            add_withdraw_funds(user_id, funds_amount)
+
             # TODO придумать че делать, когда отправляется список объектов
             await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
             # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
 
             state = dp.current_state(user=user_id)
-            await state.set_state('WITHDRAW_FUNDS_WHERE')
+            await state.set_state('WITHDRAW_FUNDS_LOCATION')
 
             await m.reply(WITHDRAW_FUNDS_WHERE(funds_amount),
                           reply=False, reply_markup=cancel_menu)
@@ -491,7 +472,7 @@ async def withdraw_funds_validation(m: types.Message):
 
 
 # выбор способа вывода средств
-@dp.message_handler(content_types=types.ContentType.ANY, state='WITHDRAW_FUNDS_WHERE')
+@dp.message_handler(content_types=types.ContentType.ANY, state='WITHDRAW_FUNDS_LOCATION')
 async def withdraw_funds_location(m: types.Message):
     user_id = m.from_user.id
     bot_last_message_id = m.message_id - 1
@@ -499,49 +480,23 @@ async def withdraw_funds_location(m: types.Message):
     if m.content_type == 'text':
         withdraw_funds_loc = m.text
 
+        last_withdraw_id = get_last_withdraw()
         # TODO придумать проверку номера телефона или банковской карты
-
-        # TODO доделать передачи инфы в стейтах
-        # TODO FSM https://docs.aiogram.dev/en/latest/examples/finite_state_machine_example.html
-        state = dp.current_state(user=user_id)
-        await state.set_state('WITHDRAW_FUNDS_SUCCESS_QUESTION')
+        update_withdraw_location(last_withdraw_id, 'qiwi', withdraw_funds_loc)
 
         # TODO придумать че делать, когда отправляется список объектов
         await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
 
-        await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_loc),
-                      reply=False, reply_markup=cancel_menu)
-    else:
-        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
-        await m.reply(WRONG_WITHDRAW_FUNDS_LOCATION, reply=False, reply_markup=cancel_menu)
-
-
-# выбор способа вывода средств
-@dp.message_handler(content_types=types.ContentType.ANY, state='WITHDRAW_FUNDS_SUCCESS_QUESTION')
-async def withdraw_funds_question(m: types.Message):
-    user_id = m.from_user.id
-    bot_last_message_id = m.message_id - 1
-
-    if m.content_type == 'text':
-        withdraw_funds_loc = m.text
-
-        # TODO придумать проверку номера телефона или банковской карты
-
-        # TODO доделать передачи инфы в стейтах
-        # TODO FSM https://docs.aiogram.dev/en/latest/examples/finite_state_machine_example.html
-        state = dp.current_state(user=user_id)
-        await state.set_state('WITHDRAW_FUNDS_SUCCESS_QUESTION')
-
-        # TODO придумать че делать, когда отправляется список объектов
-        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
-
-        payment_menu = InlineKeyboardMarkup()
-        payment_menu.add(
-            InlineKeyboardButton(text='Вывести', callback_data='check_payment_' + str(payment_id)),
+        withdraw_success_question = InlineKeyboardMarkup()
+        withdraw_success_question.add(
+            InlineKeyboardButton(text='Вывести', callback_data='withdraw_funds_' + str(last_withdraw_id)),
             InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
 
+        state = dp.current_state(user=m.from_user.id)
+        await state.set_state('WITHDRAW_FUNDS_WAIT_MONEY')
+
         await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_loc),
-                      reply=False, reply_markup=cancel_menu)
+                      reply=False, reply_markup=withdraw_success_question)
     else:
         await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
         await m.reply(WRONG_WITHDRAW_FUNDS_LOCATION, reply=False, reply_markup=cancel_menu)
@@ -610,11 +565,12 @@ async def send_mail(m: types.Message):
         await m.reply(MAILING_END(all_users, blocked_users), reply=False)
 
 
-@dp.message_handler(lambda m: m.text == '👣 Партнёрская программа' and user_banned(m.from_user.id) == False)
+@dp.message_handler(lambda m: m.text == 'Партнёрская программа')
 async def referal_button_handle(m: types.Message):
     get_bot = await bot.get_me()
-    await m.reply(PARTNER_PROGRAM(get_bot.username, m.from_user.id, referals(m.from_user.id)), reply=False,
-                  parse_mode='HTML')
+    await m.reply(PARTNER_PROGRAM(get_bot.username, m.from_user.id,
+                                  get_referrals_count(m.from_user.id)),
+                  reply=False, parse_mode='HTML')
 
 
 @dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, content_types=['text'], state='GET_USER_FOR_CHB')
@@ -883,6 +839,18 @@ async def handle_uban_button(c: types.CallbackQuery):
 
     state = dp.current_state(user=user_id)
     await state.set_state('WITHDRAW_FUNDS_VALIDATION')
+
+
+@dp.callback_query_handler(lambda c: 'withdraw_funds_' in c.data, state='WITHDRAW_FUNDS_WAIT_MONEY')
+async def qweq(c: types.CallbackQuery):
+    withdraw_id = c.data.replace('withdraw_funds_', '')
+
+    update_withdraw_status(withdraw_id, 2)
+
+    state = dp.current_state(user=c.from_user.id)
+    await state.reset_state()
+
+    await c.message.edit_text(WITHDRAW_FUNDS_WAIT_MONEY)
 
 
 @dp.callback_query_handler(lambda c: c.data == 'chb')

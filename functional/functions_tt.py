@@ -26,8 +26,8 @@ def save_tt_clip(**data):
     if client_id:
         cur = conn.cursor()
         cur.execute(
-            '''INSERT INTO videos(client, tt_clip_link, tt_clip_id, tt_music_id, goal, status, abusers) 
-            VALUES(?,?,?,?,?,?,?)''', (client_id, clip_link, clip_id, music_id, goal, 1, str({})))
+            '''INSERT INTO videos(client, tt_clip_link, tt_clip_id, tt_music_id, goal, status, abusers, date) 
+            VALUES(?,?,?,?,?,?,?,?)''', (client_id, clip_link, clip_id, music_id, goal, 1, str({}), datetime.now()))
         conn.commit()
 
         db_clip_id = cur.execute('''SELECT MAX(order_id) FROM videos''').fetchall()[0][0]
@@ -137,11 +137,29 @@ def is_user_in_db_tt(used_id):
     return count_of_user_id_in_db.fetchall()[0][0]
 
 
-def add_user_to_db_tt(user_id):
-    conn.cursor().execute(
-        '''INSERT INTO users(id, balance, alltime_clips, referals, skipped_videos, alltime_get_clips) 
-            VALUES(?,?,?,?,?, ?)''', (user_id, 0, 0, str([]), str({}), 0))
-    conn.commit()
+def add_user_to_db_tt(new_user_id, **ref_father):
+    if ref_father:
+        ref_father = ref_father['ref_father']
+
+        cur = conn.cursor()
+        cur.execute(
+            '''INSERT INTO users(id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips, ref_father) 
+                VALUES(?,?,?,?,?,?,?)''', (new_user_id, 0, 0, str([]), str({}), 0, ref_father))
+
+        referrals_of_ref_father = conn.execute(f'''SELECT referrals FROM users WHERE id = ?''', (ref_father,))
+        referrals_of_ref_father = eval(referrals_of_ref_father.fetchall()[0][0])
+        referrals_of_ref_father.append(new_user_id)
+        referrals_of_ref_father = str(referrals_of_ref_father)
+
+        cur.execute(f'''UPDATE users SET referrals = ? WHERE id = ?''', (referrals_of_ref_father, ref_father,))
+        cur.execute('''UPDATE users SET balance = (balance + ?) WHERE id = ?''', (REF_BONUS, ref_father,))
+
+        conn.commit()
+    else:
+        conn.cursor().execute(
+            '''INSERT INTO users(id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips, ref_father) 
+                VALUES(?,?,?,?,?,?,?)''', (new_user_id, 0, 0, str([]), str({}), 0, 0))
+        conn.commit()
 
 
 def add_video_to_skipped(user_id, video_id):
@@ -174,10 +192,10 @@ def get_video_stat(client_id):
     video_id_sql = cur.execute('''SELECT MAX(order_id) FROM videos WHERE client = ?''', (client_id,))
     video_id = video_id_sql.fetchall()[0][0]
 
-    stat_list = cur.execute('''SELECT tt_clip_id FROM videos WHERE client = ? AND order_id = ?''',
-                            (client_id, video_id,))
+    tt_clip_id = cur.execute('''SELECT tt_clip_id FROM videos WHERE client = ? AND order_id = ?''',
+                             (client_id, video_id,)).fetchall()[0][0]
 
-    return video_id, stat_list.fetchall()
+    return video_id, tt_clip_id
 
 
 def confirm_clip_promo(clip_number):
@@ -291,7 +309,7 @@ async def check_clip_for_paying(user_id, video_id):
 
 
 def get_music_id_from_clip_tt(short_clip_url):
-    tt_api = TikTokApi.get_instance(use_selenium=True, custom_verifyFp=TT_VERIFY_FP)
+    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP)
 
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
@@ -337,3 +355,12 @@ def deposit_money_to_balance(user_id, payment_amount):
 
     cur.execute('''UPDATE users SET balance = ? WHERE id = ?''', (user_new_balance, user_id))
     conn.commit()
+
+
+def get_referrals_count(user_id):
+    ref_count = conn.execute(f'SELECT referrals FROM users WHERE id = {user_id}')
+
+    count = eval(ref_count.fetchall()[0][0])
+    count = len(count)
+
+    return count
