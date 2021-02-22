@@ -6,7 +6,7 @@ import datetime
 conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
 
 QIWI_TOKEN = '543fa02d3b1823ca6a9d536ca749dba7'
-QIWI_ACCOUNT = '+79100938360'
+QIWI_ACCOUNT = '+79301042966'
 
 
 def create_table():
@@ -72,7 +72,10 @@ def update_withdraw_status(withdraw_id, new_status):
     cur.execute('''UPDATE withdraw_funds SET status = ? WHERE withdraw_id = ?''', (new_status, withdraw_id))
     conn.commit()
 
-    return True
+    funds_amount = cur.execute(f'SELECT funds_amount FROM withdraw_funds WHERE withdraw_id = {withdraw_id}')
+    funds_amount = funds_amount.fetchone()[0]
+
+    return funds_amount
 
 
 def update_withdraw_location(withdraw_id, location, number):
@@ -122,7 +125,7 @@ def qiwi_req():
     # кол-во элементов в запросе
     parameters = {'rows': '50'}
 
-    # не больше 100 запросов в минуте, иначе бан на 5 мин.
+    # не больше 100 запросов в минуту, иначе бан на 5 мин.
     h = s.get('https://edge.qiwi.com/payment-history/v2/persons/' + QIWI_ACCOUNT + '/payments',
               params=parameters)
 
@@ -132,6 +135,7 @@ def qiwi_req():
 if __name__ == '__main__':
     # create_table()
     # create_user_payment_table()
-    create_withdraw_funds_table()
+    # create_withdraw_funds_table()
     # add_user(12)
     # check_payment(12)
+    qiwi_req()

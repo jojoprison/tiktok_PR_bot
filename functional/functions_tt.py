@@ -1,10 +1,9 @@
-import datetime
 import sqlite3
 from config.settings import *
 from bs4 import BeautifulSoup
 import requests
 from TikTokApi import TikTokApi
-from datetime import datetime
+import datetime
 import pytz
 import urllib.parse as url_parser
 
@@ -26,24 +25,25 @@ def save_tt_clip(**data):
     if client_id:
         cur = conn.cursor()
         cur.execute(
-            '''INSERT INTO videos(client, tt_clip_link, tt_clip_id, tt_music_id, goal, status, abusers, date) 
-            VALUES(?,?,?,?,?,?,?,?)''', (client_id, clip_link, clip_id, music_id, goal, 1, str({}), datetime.now()))
+            '''INSERT INTO clips(client, tt_clip_link, tt_clip_id, tt_music_id, goal, status, abusers, date) 
+            VALUES(?,?,?,?,?,?,?,?)''',
+            (client_id, clip_link, clip_id, music_id, goal, 2, str({}), datetime.datetime.now()))
         conn.commit()
 
-        db_clip_id = cur.execute('''SELECT MAX(order_id) FROM videos''').fetchall()[0][0]
+        order_id = cur.execute('''SELECT MAX(order_id) FROM clips''').fetchall()[0][0]
 
-        return db_clip_id
+        return order_id
 
 
 def update_tt_video_goal(goal):
     cur = conn.cursor()
 
-    last_video_id = cur.execute('''SELECT MAX(order_id) FROM videos''').fetchall()[0][0]
+    last_order_id = cur.execute('''SELECT MAX(order_id) FROM clips''').fetchall()[0][0]
 
-    cur.execute('''UPDATE videos SET goal = ? WHERE order_id = ?''', (goal, last_video_id,))
+    cur.execute('''UPDATE clips SET goal = ? WHERE order_id = ?''', (goal, last_order_id,))
     conn.commit()
 
-    return last_video_id
+    return last_order_id
 
 
 def add_tt_acc_to_user(user_id, tt_acc_link):
@@ -55,20 +55,31 @@ def add_tt_acc_to_user(user_id, tt_acc_link):
     return True
 
 
-def videos_for_work(user_id):
-    videos = conn.execute('''SELECT * FROM videos WHERE status = 1 AND goal >= 1''')
-    videos_list = videos.fetchall()
+async def clips_for_work(user_id):
+    clip_list = conn.execute('SELECT order_id, tt_clip_link, goal, abusers FROM clips '
+                             'WHERE status = 1 AND goal >= 1')
+    clip_list = clip_list.fetchall()
 
-    if len(videos_list) >= 1:
-        good_videos = {}
-        for video in videos_list:
-            if len(eval(video[5])) < video[3] and user_id not in eval(video[5]):
-                good_videos[video[1]] = video[0]
+    if len(clip_list) >= 1:
+
+        good_clips = {}
+
+        for clip_info in clip_list:
+            order_id = clip_info[0]
+            tt_clip_link = clip_info[1]
+            goal = clip_info[2]
+            abusers = clip_info[3]
+
+            # число записавших меньше нужного числа и пользователь еще не записывал видос
+            if len(eval(abusers)) < goal and user_id not in eval(abusers):
+                # засовываю еще айди чтоб передавать его в callback_data инлайн кнопки
+                good_clips[order_id] = tt_clip_link
             # TODO удалять видос если больше не промится (хотя можно заносить в другую базу чтоб инфу собирать)
             # else:
             #     delete_channel_from_db(x[0])
-        if len(good_videos) >= 1:
-            return good_videos
+
+        if len(good_clips) >= 1:
+            return good_clips
         else:
             return 0
     else:
@@ -90,7 +101,7 @@ def get_skipped_videos(user_id):
 def edit_promo_status(number, status):
     cur = conn.cursor()
     sql = cur.execute('''SELECT COUNT(order_id), tt_clip_id, client, goal, status, abusers
-                        FROM videos WHERE order_id = ?''', (number,))
+                        FROM clips WHERE order_id = ?''', (number,))
 
     sql_fetchall = sql.fetchall()
     print(sql_fetchall[0][0])
@@ -101,7 +112,7 @@ def edit_promo_status(number, status):
     print(sql_fetchall[0][5])
 
     if sql_fetchall[0][0] == 1 and status == 0:
-        cur.execute('''UPDATE videos SET status = ? WHERE order_id = ?''', (status, number,))
+        cur.execute('''UPDATE clips SET status = ? WHERE order_id = ?''', (status, number,))
 
         # TODO непонятно, меняет баланс в случае если бот в канале не админ
         delta = len(eval(sql_fetchall[0][5])) - sql_fetchall[0][3]
@@ -120,16 +131,17 @@ def edit_promo_status(number, status):
         return client_id
 
 
-def delete_tt_video_from_db(number):
+def delete_tt_clip_from_promo_db(number):
     number = int(number)
 
-    status = conn.execute('''SELECT status FROM videos WHERE order_id = ?''', (number,))
+    status = conn.execute('''SELECT status FROM clips WHERE order_id = ?''', (number,))
 
-    if status.fetchall()[0][0] == 0:
-        conn.cursor().execute('''DELETE FROM videos WHERE order_id = ?''', (number,))
+    if status.fetchall()[0][0] != 1:
+        conn.cursor().execute('''DELETE FROM clips WHERE order_id = ?''', (number,))
         conn.commit()
+        return True
     else:
-        return 1
+        return False
 
 
 def is_user_in_db_tt(used_id):
@@ -157,26 +169,23 @@ def add_user_to_db_tt(new_user_id, **ref_father):
         conn.commit()
     else:
         conn.cursor().execute(
-            '''INSERT INTO users(id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips, ref_father) 
-                VALUES(?,?,?,?,?,?,?)''', (new_user_id, 0, 0, str([]), str({}), 0, 0))
+            '''INSERT INTO users(id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips) 
+                VALUES(?,?,?,?,?,?)''', (new_user_id, 0, 0, str([]), str({}), 0))
         conn.commit()
 
 
-def add_video_to_skipped(user_id, video_id):
-    video_id = int(video_id)
+def add_video_to_skipped(user_id, clip_id):
+    clip_id = int(clip_id)
 
-    sql = conn.execute('''SELECT skipped_videos FROM users WHERE id = ?''', (user_id,))
-    sql_fetchall = sql.fetchall()
+    skipped_clips_sql = conn.execute('''SELECT skipped_videos FROM users WHERE id = ?''', (user_id,))
+    skipped_videos = skipped_clips_sql.fetchall()[0][0]
 
-    skipped_videos = sql_fetchall[0][0]
-    # преобразует словарь пропущенных видосов до нормального вида
+    # преобразует словарь пропущенных видосов до нормального вида (list я так понимаю)
     skipped_videos = eval(skipped_videos)
 
-    skipped_videos[video_id] = datetime.now()
+    skipped_videos[clip_id] = datetime.datetime.now()
     conn.cursor().execute('''UPDATE users SET skipped_videos = ? WHERE id = ?''', (str(skipped_videos), user_id))
     conn.commit()
-
-    return True
 
 
 def user_balance_tt(user_id):
@@ -189,31 +198,28 @@ def user_balance_tt(user_id):
 def get_video_stat(client_id):
     cur = conn.cursor()
 
-    video_id_sql = cur.execute('''SELECT MAX(order_id) FROM videos WHERE client = ?''', (client_id,))
-    video_id = video_id_sql.fetchall()[0][0]
+    last_order_id_sql = cur.execute('''SELECT MAX(order_id) FROM clips WHERE client = ?''', (client_id,))
+    last_order_id = last_order_id_sql.fetchall()[0][0]
 
-    tt_clip_id = cur.execute('''SELECT tt_clip_id FROM videos WHERE client = ? AND order_id = ?''',
-                             (client_id, video_id,)).fetchall()[0][0]
-
-    return video_id, tt_clip_id
+    return last_order_id
 
 
-def confirm_clip_promo(clip_number):
+def confirm_clip_promo(order_id):
     try:
-        clip_number = int(clip_number)
+        order_id = int(order_id)
 
-        prom_info = conn.execute('''SELECT client, goal FROM videos WHERE order_id = ?''', (clip_number,))
-        prom_info = prom_info.fetchall()
+        prom_info = conn.execute('''SELECT client, goal FROM clips WHERE order_id = ?''', (order_id,))
+        prom_info = prom_info.fetchall()[0]
 
-        client_id = prom_info[0][0]
+        client_id = prom_info[0]
         # общая суммка заказа с учетом стоимости одного клипа
-        clip_goal = prom_info[0][1] * CASH_MIN
+        clip_goal = prom_info[1] * CASH_MIN
 
-        conn.execute('''UPDATE videos SET status = 1 WHERE order_id = ?''', (clip_number,))
+        conn.execute('''UPDATE clips SET status = 1 WHERE order_id = ?''', (order_id,))
         conn.execute('''UPDATE users SET balance = balance - ? WHERE id = ?''', (clip_goal, client_id,))
         conn.commit()
 
-        return 1
+        return True
     except Exception as e:
         return e
 
@@ -263,8 +269,8 @@ def get_tt_acc_name(url):
     return username.get_text()
 
 
-def update_tt_acc_username(user_id):
-    tt_acc_link = conn.execute(f'''SELECT tt_acc_link FROM users WHERE id = ?''', (user_id,))
+def update_tt_acc_username_by_id(user_id):
+    tt_acc_link = conn.execute(f'SELECT tt_acc_link FROM users WHERE id = ?', (user_id,))
     tt_acc_link = tt_acc_link.fetchall()[0][0]
 
     tt_acc_username = get_tt_acc_name(tt_acc_link)
@@ -276,36 +282,82 @@ def update_tt_acc_username(user_id):
     return True
 
 
-# TODO проверка музыку
+def update_tt_acc_username_all():
+    user_tt_links = conn.execute(f'SELECT id, tt_acc_link FROM users WHERE tt_acc_username IS NULL')
+    user_tt_links = user_tt_links.fetchall()
+
+    # TODO флаг на проверку, нужен ли коммит в БД
+    db_updated = False
+
+    for user_link_tuple in user_tt_links:
+        tt_link = user_link_tuple[1]
+
+        if tt_link is not None:
+            tt_username = get_tt_acc_name(tt_link)
+            print(tt_username)
+
+            cur = conn.cursor()
+            cur.execute('''UPDATE users SET tt_acc_username = ? WHERE id = ?''', (tt_username, user_link_tuple[0]))
+
+            db_updated = True
+
+    if db_updated:
+        conn.commit()
+
+
+def is_return_clip_in_queue(user_id, clip_id):
+    clip_id = int(clip_id)
+
+    skipped_clips_sql = conn.execute('''SELECT skipped_videos FROM users WHERE id = ?''', (user_id,))
+    skipped_videos = skipped_clips_sql.fetchall()[0][0]
+
+    # преобразует словарь пропущенных видосов до нормального вида (list я так понимаю)
+    skipped_videos = eval(skipped_videos)
+
+    # удаляем клип из списка пропущенных
+    del skipped_videos[clip_id]
+
+    conn.cursor().execute('''UPDATE users SET skipped_videos = ? WHERE id = ?''', (str(skipped_videos), user_id))
+    conn.commit()
+
+
+# TODO проверка существования клипа на данную музыку
 async def check_clip_for_paying(user_id, video_id):
-    tt_acc_username = conn.execute(f'''SELECT tt_acc_username FROM users WHERE id = ?''', (user_id,))
-    tt_acc_username = tt_acc_username.fetchall()[0][0]
-    tt_acc_username = tt_acc_username.replace(' ', '')
+    cur = conn.cursor()
+    cur.execute(
+        '''INSERT INTO tasks(user_id, tt_clip_id, status, date) 
+        VALUES(?,?,?,?)''', (user_id, video_id, 2, datetime.datetime.now()))
+    conn.commit()
 
-    tt_api = await TikTokApi.get_instance()
+    # TODO пока заглушка на проверку из-за неработоспособности TT
+    # tt_acc_username = conn.execute(f'SELECT tt_acc_username FROM users WHERE id = ?', (user_id,))
+    # tt_acc_username = tt_acc_username.fetchall()[0][0]
+    # tt_acc_username = tt_acc_username.replace(' ', '')
 
-    tt_data = await tt_api.getUser(tt_acc_username)
-
-    tt_clips = await tt_data.get('items')
-
-    last_3_clips = list()
-    for i in range(0, 3):
-        last_3_clips.append(tt_clips[i])
-
-    for clip in last_3_clips:
-        clip_created = clip.get('createTime')
-
-        moscow_tz = pytz.timezone('Europe/Moscow')
-
-        now = datetime.now().astimezone(moscow_tz)
-        clip_created = datetime.utcfromtimestamp(clip_created).astimezone(moscow_tz)
-
-        delta = now - clip_created
-        print(delta)
-
-        seconds = delta.total_seconds()
-        hours = seconds // 3600
-        print(hours)
+    # tt_api = await TikTokApi.get_instance()
+    #
+    # tt_data = await tt_api.getUser(tt_acc_username)
+    #
+    # tt_clips = await tt_data.get('items')
+    #
+    # last_3_clips = list()
+    # for i in range(0, 3):
+    #     last_3_clips.append(tt_clips[i])
+    #
+    # for clip in last_3_clips:
+    #     clip_created = clip.get('createTime')
+    #
+    #     moscow_tz = pytz.timezone('Europe/Moscow')
+    #
+    #     now = datetime.datetime.now().astimezone(moscow_tz)
+    #     clip_created = datetime.datetime.utcfromtimestamp(clip_created).astimezone(moscow_tz)
+    #
+    #     delta = now - clip_created
+    #     print(delta)
+    #
+    #     seconds = delta.total_seconds()
+    #     hours = seconds // 3600
+    #     print(hours)
 
 
 def get_music_id_from_clip_tt(short_clip_url):
@@ -349,8 +401,6 @@ def deposit_money_to_balance(user_id, payment_amount):
     user_balance = conn.execute(f'''SELECT balance FROM users WHERE id = ?''', (user_id,))
     user_balance = user_balance.fetchall()[0][0]
 
-    print(type(user_balance))
-    print(user_balance)
     user_new_balance = user_balance + payment_amount
 
     cur.execute('''UPDATE users SET balance = ? WHERE id = ?''', (user_new_balance, user_id))
@@ -364,3 +414,150 @@ def get_referrals_count(user_id):
     count = len(count)
 
     return count
+
+
+def pay_all_completed_tasks():
+    cur = conn.cursor()
+
+    pay_list = {}
+
+    users_to_pay = cur.execute('SELECT user_id FROM tasks WHERE status = 2')
+    users_to_pay = users_to_pay.fetchall()
+    print(users_to_pay)
+
+    # user_new_balance = user_balance + payment_amount
+
+    # cur.execute('''UPDATE users SET balance = ? WHERE id = ?''', (user_new_balance, user_id))
+    # conn.commit()
+
+
+def pay_completed_user_tasks(user_id):
+    cur = conn.cursor()
+
+    clip_payment_count = cur.execute(f'SELECT count() FROM tasks WHERE user_id = {user_id} AND status = 2')
+    clip_payment_count = clip_payment_count.fetchone()[0]
+
+    cur.execute('''UPDATE users SET balance = balance + ?,
+                                    alltime_clips = alltime_clips + ? WHERE id = ?''',
+                (clip_payment_count * CLIP_PAYMENT, clip_payment_count, user_id))
+    cur.execute(f'UPDATE tasks SET status = 1 WHERE user_id = {user_id}')
+    conn.commit()
+
+    return clip_payment_count * CLIP_PAYMENT
+
+
+def get_unverified_withdraw_funds():
+    cur = conn.cursor()
+
+    result_withdraw_list = {}
+
+    withdraw_list = cur.execute('SELECT user_id, location, number, funds_amount FROM withdraw_funds WHERE status = 2')
+    withdraw_list = withdraw_list.fetchall()
+
+    for withdraw in withdraw_list:
+        user_id = withdraw[0]
+
+        tt_user_link = cur.execute(f'SELECT tt_acc_link FROM users WHERE id = {user_id}')
+        tt_user_link = tt_user_link.fetchone()[0]
+
+        withdraw_amount = withdraw[3]
+        location = withdraw[1]
+        number = withdraw[2]
+
+        if user_id in result_withdraw_list.keys():
+            old_withdraw_amount = result_withdraw_list[user_id]['withdraw_amount']
+            withdraw_amount += old_withdraw_amount
+
+        withdraw_info = {'tt_user_link': tt_user_link, 'location': location, 'number': number,
+                         'withdraw_amount': withdraw_amount}
+
+        result_withdraw_list[user_id] = withdraw_info
+
+    return result_withdraw_list
+
+
+def get_first_unverified_withdraw_funds():
+    cur = conn.cursor()
+
+    result_withdraw = {}
+
+    first_unverified_withdraw = cur.execute('SELECT user_id, location, number FROM withdraw_funds '
+                                            'WHERE status = 2')
+    first_unverified_withdraw = first_unverified_withdraw.fetchone()
+
+    if first_unverified_withdraw:
+        first_unverified_withdraw_used_id = first_unverified_withdraw[0]
+        first_unverified_withdraw_location = first_unverified_withdraw[1]
+        first_unverified_withdraw_number = first_unverified_withdraw[2]
+
+        user_withdraw_info_list = cur.execute(f'''SELECT withdraw_id, location, number, funds_amount
+                                                FROM withdraw_funds
+                                                WHERE user_id = ?
+                                                and status = 2
+                                                and location = ?
+                                                and number = ?''', (first_unverified_withdraw_used_id,
+                                                                    first_unverified_withdraw_location,
+                                                                    first_unverified_withdraw_number))
+        user_withdraw_info_list = user_withdraw_info_list.fetchall()
+
+        for user_withdraw_info in user_withdraw_info_list:
+            withdraw_id = user_withdraw_info[0]
+            withdraw_amount = user_withdraw_info[3]
+            location = user_withdraw_info[1]
+            number = user_withdraw_info[2]
+
+            if first_unverified_withdraw_used_id in result_withdraw.keys():
+                old_withdraw_amount = result_withdraw[first_unverified_withdraw_used_id]['withdraw_amount']
+                withdraw_amount += old_withdraw_amount
+
+                withdraw_id_list = result_withdraw[first_unverified_withdraw_used_id]['withdraw_id_list']
+                withdraw_id_list.append(withdraw_id)
+            else:
+                withdraw_id_list = [withdraw_id]
+
+            tt_user_link = cur.execute(f'SELECT tt_acc_link FROM users WHERE id = {first_unverified_withdraw_used_id}')
+            tt_user_link = tt_user_link.fetchone()[0]
+
+            withdraw_info = {'withdraw_id_list': withdraw_id_list, 'tt_user_link': tt_user_link,
+                             'location': location, 'number': number, 'withdraw_amount': withdraw_amount}
+
+            result_withdraw[first_unverified_withdraw_used_id] = withdraw_info
+
+    return result_withdraw
+
+
+def increase_balance_tt(user_id, balance_increase):
+    cur = conn.cursor()
+
+    count = cur.execute('''SELECT COUNT(id) FROM users WHERE id = ?''', (user_id,))
+
+    if count.fetchall()[0][0] == 1:
+        user_id = int(user_id)
+        balance_increase = int(balance_increase)
+
+        cur.execute('''UPDATE users SET balance = balance + ? WHERE id = ?''', (balance_increase, user_id,))
+        conn.commit()
+
+        return 'Баланс пользователя был успешно изменён.'
+    else:
+        return 'Пользователь не был найден в БД или количесиво записей для его id != 1.'
+
+
+def change_balance_tt(user_id, new_balance):
+    cur = conn.cursor()
+    cur.execute('''UPDATE users SET balance = ? WHERE id = ?''', (new_balance, user_id,))
+    conn.commit()
+
+    return True
+
+
+# TODO доделать
+def submit_withdraw(withdraw_id):
+    cur = conn.cursor()
+
+    cur.execute('''UPDATE withdraw_funds SET status = 1 WHERE withdraw_id = ?''', (withdraw_id,))
+    conn.commit()
+
+
+def add_user_to_clip_abusers(user_id, order_id):
+
