@@ -67,4 +67,5 @@ def qiwi_req():
 if __name__ == '__main__':
     # create_table()
     # add_user(12)
-    check_payment(12)
+    # check_payment(12)
+    print(qiwi_req())
