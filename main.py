@@ -1,24 +1,22 @@
-from utility.messages import *
-from config.settings import *
-from payment.qiwi.payment import *
-from payment.qiwi.comment_generation import *
-from functional.functions_tt import *
-from functional.functions_old import *
+import asyncio
 import random
+import time
 import urllib.parse as url_parser
+
 from aiogram import Bot, types
-from aiogram.dispatcher import Dispatcher
-from aiogram.utils import executor
-from aiogram.utils.helper import Helper, ListItem
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
+from aiogram.dispatcher import Dispatcher
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, \
     InlineKeyboardButton
+from aiogram.utils import executor
 from aiogram.utils.exceptions import BotBlocked
-import asyncio
-from aiogram.utils.exceptions import Unauthorized
-from concurrent.futures import ProcessPoolExecutor
-import time
+from aiogram.utils.helper import Helper, ListItem
+
+from functional.functions_old import *
+from functional.functions_tt import *
+from payment.qiwi.payment import *
+from utility.messages import *
 
 loop = asyncio.get_event_loop()
 
@@ -428,17 +426,22 @@ async def withdraw_funds_validation(m: types.Message):
             balance = tt_user_balance(user_id=user_id)
 
             if balance >= funds_amount:
-                add_withdraw_funds(user_id, funds_amount)
+                if funds_amount >= 200:
+                    add_withdraw_funds(user_id, funds_amount)
 
-                # TODO придумать че делать, когда отправляется список объектов
-                await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
-                # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+                    # TODO придумать че делать, когда отправляется список объектов
+                    # TODO вылезает ошибка когда я ищу предыдущее сообение, если функцией пользуются несколько челов
+                    await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+                    # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
 
-                state = dp.current_state(user=user_id)
-                await state.set_state('WITHDRAW_FUNDS_LOCATION')
+                    state = dp.current_state(user=user_id)
+                    await state.set_state('WITHDRAW_FUNDS_LOCATION')
 
-                await m.reply(WITHDRAW_FUNDS_WHERE(funds_amount),
-                              reply=False, reply_markup=cancel_menu)
+                    await m.reply(WITHDRAW_FUNDS_WHERE(funds_amount),
+                                  reply=False, reply_markup=cancel_menu)
+                else:
+                    await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+                    await m.reply(WITHDRAW_SUM_LESS_200, reply=False, reply_markup=cancel_menu)
             else:
                 await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
                 await m.reply(INSUFFICIENT_FUNDS_TO_WITHDRAW, reply=False, reply_markup=cancel_menu)
@@ -670,6 +673,9 @@ async def confirm_button_handler(c: types.callback_query):
         await c.message.edit_text(CLIP_SUCCESSFULLY_ADDED)
         state = dp.current_state(user=c.from_user.id)
         await state.reset_state()
+
+        for user_id in get_all_user_id():
+            await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
     else:
         await c.message.edit_text(CLIP_IS_NOT_PROMO)
         state = dp.current_state(user=c.from_user.id)
@@ -703,8 +709,12 @@ async def check_clip(c: types.CallbackQuery):
     # если клипы засчитались в другую проверку и нет смысла оповещать о 0 бабок
     # (там их несколько подряд можно запустить)
     if payment_sum != 0:
-        # отправит сообщение, когда получит ответ о пополнении кошелька
-        await bot.send_message(user_id, 'Поздравляю! Вы получили ' + str(payment_sum) + ' RUB.')
+        user_in_abusers_status = add_user_to_clip_abusers(clip_order_id, user_id)
+        alltime_get_clips_update_status = update_user_alltime_get_clips(clip_order_id, 1)
+
+        if user_in_abusers_status and alltime_get_clips_update_status:
+            # отправит сообщение, когда получит ответ о пополнении кошелька
+            await bot.send_message(user_id, 'Поздравляю! Вы получили ' + str(payment_sum) + ' RUB.')
 
     # запускаем такси смены состояния и отправки ответа от бота
     await reset_state_task
@@ -735,7 +745,7 @@ async def skip_video(c: types.CallbackQuery):
     return_clip_in_queue_success = asyncio.create_task(return_clip_int_queue(user_id, clip_id, 1800))
     if await return_clip_in_queue_success:
         # отправит сообщение о появлении нового клипа
-        await bot.send_message(user_id, 'Появился новый клип на продвижение!')
+        await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
 
 
 @dp.callback_query_handler(lambda c: c.data == 'stat')

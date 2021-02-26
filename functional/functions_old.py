@@ -6,12 +6,12 @@ from config.settings import *
 conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\data.db')
 
 
-def is_user_in_db(id):
-    count_of_user_id_in_db = conn.execute(f'''SELECT COUNT(id) FROM users_old WHERE id = {id}''')
+def is_user_in_db(user_Id):
+    count_of_user_id_in_db = conn.execute(f'''SELECT COUNT(user_Id) FROM users_old WHERE user_Id = {id}''')
     return count_of_user_id_in_db.fetchall()[0][0]
 
 
-def add_user_to_db(id, **ref_father):
+def add_user_to_db(user_Id, **ref_father):
     if ref_father:
         ref_father = ref_father['ref_father']
         conn.execute(

@@ -1,13 +1,21 @@
+import datetime
 import sqlite3
-from config.settings import *
-from bs4 import BeautifulSoup
+import urllib.parse as url_parser
+import aiosqlite
+
 import requests
 from TikTokApi import TikTokApi
-import datetime
-import pytz
-import urllib.parse as url_parser
+from bs4 import BeautifulSoup
+
+from config.settings import *
 
 conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
+
+
+# def __init__():
+#     conn = await aiosqlite.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
+
+# conn = await aiosqlite.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
 
 
 def save_tt_clip(**data):
@@ -49,7 +57,7 @@ def update_tt_video_goal(goal):
 def add_tt_acc_to_user(user_id, tt_acc_link):
     cur = conn.cursor()
 
-    cur.execute('''UPDATE users SET tt_acc_link = ? WHERE id = ?''', (tt_acc_link, user_id,))
+    cur.execute('''UPDATE users SET tt_acc_link = ? WHERE user_id = ?''', (tt_acc_link, user_id,))
     conn.commit()
 
     return True
@@ -90,7 +98,7 @@ async def clips_for_work(user_id):
 def get_skipped_videos(user_id):
     cur = conn.cursor()
 
-    videos = cur.execute('''SELECT skipped_videos FROM users WHERE id = ?''', (user_id,))
+    videos = cur.execute('''SELECT skipped_videos FROM users WHERE user_id = ?''', (user_id,))
     skipped_videos_fetchall = videos.fetchall()
 
     skipped_clips = eval(skipped_videos_fetchall[0][0])
@@ -123,7 +131,7 @@ def edit_promo_status(number, status):
         print(delta)
 
         client_id = sql_fetchall[0][2]
-        cur.execute('''UPDATE users SET balance = balance + ? WHERE id = ?''', (delta, client_id,))
+        cur.execute('''UPDATE users SET balance = balance + ? WHERE user_id = ?''', (delta, client_id,))
         conn.commit()
 
         cur.close()
@@ -145,7 +153,7 @@ def delete_tt_clip_from_promo_db(number):
 
 
 def is_user_in_db_tt(used_id):
-    count_of_user_id_in_db = conn.execute(f'''SELECT COUNT(id) FROM users WHERE id = {used_id}''')
+    count_of_user_id_in_db = conn.execute(f'''SELECT COUNT(user_id) FROM users WHERE user_id = {used_id}''')
     return count_of_user_id_in_db.fetchall()[0][0]
 
 
@@ -155,21 +163,21 @@ def add_user_to_db_tt(new_user_id, **ref_father):
 
         cur = conn.cursor()
         cur.execute(
-            '''INSERT INTO users(id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips, ref_father) 
+            '''INSERT INTO users(user_id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips, ref_father) 
                 VALUES(?,?,?,?,?,?,?)''', (new_user_id, 0, 0, str([]), str({}), 0, ref_father))
 
-        referrals_of_ref_father = conn.execute(f'''SELECT referrals FROM users WHERE id = ?''', (ref_father,))
+        referrals_of_ref_father = conn.execute(f'''SELECT referrals FROM users WHERE user_id = ?''', (ref_father,))
         referrals_of_ref_father = eval(referrals_of_ref_father.fetchall()[0][0])
         referrals_of_ref_father.append(new_user_id)
         referrals_of_ref_father = str(referrals_of_ref_father)
 
-        cur.execute(f'''UPDATE users SET referrals = ? WHERE id = ?''', (referrals_of_ref_father, ref_father,))
-        cur.execute('''UPDATE users SET balance = (balance + ?) WHERE id = ?''', (REF_BONUS, ref_father,))
+        cur.execute(f'''UPDATE users SET referrals = ? WHERE user_id = ?''', (referrals_of_ref_father, ref_father,))
+        cur.execute('''UPDATE users SET balance = (balance + ?) WHERE user_id = ?''', (REF_BONUS, ref_father,))
 
         conn.commit()
     else:
         conn.cursor().execute(
-            '''INSERT INTO users(id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips) 
+            '''INSERT INTO users(user_id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips) 
                 VALUES(?,?,?,?,?,?)''', (new_user_id, 0, 0, str([]), str({}), 0))
         conn.commit()
 
@@ -177,22 +185,28 @@ def add_user_to_db_tt(new_user_id, **ref_father):
 def add_video_to_skipped(user_id, clip_id):
     clip_id = int(clip_id)
 
-    skipped_clips_sql = conn.execute('''SELECT skipped_videos FROM users WHERE id = ?''', (user_id,))
+    skipped_clips_sql = conn.execute('''SELECT skipped_videos FROM users WHERE user_id = ?''', (user_id,))
     skipped_videos = skipped_clips_sql.fetchall()[0][0]
 
     # преобразует словарь пропущенных видосов до нормального вида (list я так понимаю)
     skipped_videos = eval(skipped_videos)
 
     skipped_videos[clip_id] = datetime.datetime.now()
-    conn.cursor().execute('''UPDATE users SET skipped_videos = ? WHERE id = ?''', (str(skipped_videos), user_id))
+    conn.cursor().execute('''UPDATE users SET skipped_videos = ? WHERE user_id = ?''', (str(skipped_videos), user_id))
     conn.commit()
 
 
 def user_balance_tt(user_id):
-    balance = conn.execute(f'''SELECT balance FROM users WHERE id = ?''', (user_id,))
+    balance = conn.execute(f'''SELECT balance FROM users WHERE user_id = ?''', (user_id,))
     balance = balance.fetchall()[0][0]
 
     return balance
+
+
+async def user_balance_tt_aio(user_id):
+    async with conn.execute(f'''SELECT balance FROM users WHERE user_id = ?''', (user_id,)) as cursor:
+        async for row in cursor:
+            print(row)
 
 
 def get_video_stat(client_id):
@@ -216,7 +230,7 @@ def confirm_clip_promo(order_id):
         clip_goal = prom_info[1] * CASH_MIN
 
         conn.execute('''UPDATE clips SET status = 1 WHERE order_id = ?''', (order_id,))
-        conn.execute('''UPDATE users SET balance = balance - ? WHERE id = ?''', (clip_goal, client_id,))
+        conn.execute('''UPDATE users SET balance = balance - ? WHERE user_id = ?''', (clip_goal, client_id,))
         conn.commit()
 
         return True
@@ -225,28 +239,28 @@ def confirm_clip_promo(order_id):
 
 
 def tt_user_balance(user_id):
-    balance = conn.execute(f'''SELECT balance FROM users WHERE id = ?''', (user_id,))
+    balance = conn.execute(f'''SELECT balance FROM users WHERE user_id = ?''', (user_id,))
     balance = balance.fetchall()[0][0]
 
     return balance
 
 
 def tt_account_link(user_id):
-    tt_acc_link = conn.execute(f'''SELECT tt_acc_link FROM users WHERE id = ?''', (user_id,))
+    tt_acc_link = conn.execute(f'''SELECT tt_acc_link FROM users WHERE user_id = ?''', (user_id,))
     tt_acc_link = tt_acc_link.fetchall()[0][0]
 
     return tt_acc_link
 
 
 def alltime_clips(user_id):
-    clips = conn.execute(f'''SELECT alltime_clips FROM users WHERE id = {user_id}''')
+    clips = conn.execute(f'''SELECT alltime_clips FROM users WHERE user_id = {user_id}''')
     clips = clips.fetchall()[0][0]
 
     return clips
 
 
 def alltime_get_clips(user_id):
-    clips = conn.execute(f'''SELECT alltime_get_clips FROM users WHERE id = {user_id}''')
+    clips = conn.execute(f'''SELECT alltime_get_clips FROM users WHERE user_id = {user_id}''')
     clips = clips.fetchall()[0][0]
 
     return clips
@@ -270,20 +284,20 @@ def get_tt_acc_name(url):
 
 
 def update_tt_acc_username_by_id(user_id):
-    tt_acc_link = conn.execute(f'SELECT tt_acc_link FROM users WHERE id = ?', (user_id,))
+    tt_acc_link = conn.execute(f'SELECT tt_acc_link FROM users WHERE user_id = ?', (user_id,))
     tt_acc_link = tt_acc_link.fetchall()[0][0]
 
     tt_acc_username = get_tt_acc_name(tt_acc_link)
 
     cur = conn.cursor()
-    cur.execute('''UPDATE users SET tt_acc_username = ? WHERE id = ?''', (tt_acc_username, user_id))
+    cur.execute('''UPDATE users SET tt_acc_username = ? WHERE user_id = ?''', (tt_acc_username, user_id))
     conn.commit()
 
     return True
 
 
 def update_tt_acc_username_all():
-    user_tt_links = conn.execute(f'SELECT id, tt_acc_link FROM users WHERE tt_acc_username IS NULL')
+    user_tt_links = conn.execute(f'SELECT user_id, tt_acc_link FROM users WHERE tt_acc_username IS NULL')
     user_tt_links = user_tt_links.fetchall()
 
     # TODO флаг на проверку, нужен ли коммит в БД
@@ -297,7 +311,7 @@ def update_tt_acc_username_all():
             print(tt_username)
 
             cur = conn.cursor()
-            cur.execute('''UPDATE users SET tt_acc_username = ? WHERE id = ?''', (tt_username, user_link_tuple[0]))
+            cur.execute('''UPDATE users SET tt_acc_username = ? WHERE user_id = ?''', (tt_username, user_link_tuple[0]))
 
             db_updated = True
 
@@ -308,7 +322,7 @@ def update_tt_acc_username_all():
 def is_return_clip_in_queue(user_id, clip_id):
     clip_id = int(clip_id)
 
-    skipped_clips_sql = conn.execute('''SELECT skipped_videos FROM users WHERE id = ?''', (user_id,))
+    skipped_clips_sql = conn.execute('''SELECT skipped_videos FROM users WHERE user_id = ?''', (user_id,))
     skipped_videos = skipped_clips_sql.fetchall()[0][0]
 
     # преобразует словарь пропущенных видосов до нормального вида (list я так понимаю)
@@ -317,7 +331,7 @@ def is_return_clip_in_queue(user_id, clip_id):
     # удаляем клип из списка пропущенных
     del skipped_videos[clip_id]
 
-    conn.cursor().execute('''UPDATE users SET skipped_videos = ? WHERE id = ?''', (str(skipped_videos), user_id))
+    conn.cursor().execute('''UPDATE users SET skipped_videos = ? WHERE user_id = ?''', (str(skipped_videos), user_id))
     conn.commit()
 
 
@@ -398,17 +412,17 @@ def get_clip_id_from_url(url):
 def deposit_money_to_balance(user_id, payment_amount):
     cur = conn.cursor()
 
-    user_balance = conn.execute(f'''SELECT balance FROM users WHERE id = ?''', (user_id,))
+    user_balance = conn.execute(f'''SELECT balance FROM users WHERE user_id = ?''', (user_id,))
     user_balance = user_balance.fetchall()[0][0]
 
     user_new_balance = user_balance + payment_amount
 
-    cur.execute('''UPDATE users SET balance = ? WHERE id = ?''', (user_new_balance, user_id))
+    cur.execute('''UPDATE users SET balance = ? WHERE user_id = ?''', (user_new_balance, user_id))
     conn.commit()
 
 
 def get_referrals_count(user_id):
-    ref_count = conn.execute(f'SELECT referrals FROM users WHERE id = {user_id}')
+    ref_count = conn.execute(f'SELECT referrals FROM users WHERE user_id = {user_id}')
 
     count = eval(ref_count.fetchall()[0][0])
     count = len(count)
@@ -416,19 +430,13 @@ def get_referrals_count(user_id):
     return count
 
 
+# TODO придумать куда воткнуть либо удалить
 def pay_all_completed_tasks():
     cur = conn.cursor()
-
-    pay_list = {}
 
     users_to_pay = cur.execute('SELECT user_id FROM tasks WHERE status = 2')
     users_to_pay = users_to_pay.fetchall()
     print(users_to_pay)
-
-    # user_new_balance = user_balance + payment_amount
-
-    # cur.execute('''UPDATE users SET balance = ? WHERE id = ?''', (user_new_balance, user_id))
-    # conn.commit()
 
 
 def pay_completed_user_tasks(user_id):
@@ -438,7 +446,7 @@ def pay_completed_user_tasks(user_id):
     clip_payment_count = clip_payment_count.fetchone()[0]
 
     cur.execute('''UPDATE users SET balance = balance + ?,
-                                    alltime_clips = alltime_clips + ? WHERE id = ?''',
+                                    alltime_clips = alltime_clips + ? WHERE user_id = ?''',
                 (clip_payment_count * CLIP_PAYMENT, clip_payment_count, user_id))
     cur.execute(f'UPDATE tasks SET status = 1 WHERE user_id = {user_id}')
     conn.commit()
@@ -457,7 +465,7 @@ def get_unverified_withdraw_funds():
     for withdraw in withdraw_list:
         user_id = withdraw[0]
 
-        tt_user_link = cur.execute(f'SELECT tt_acc_link FROM users WHERE id = {user_id}')
+        tt_user_link = cur.execute(f'SELECT tt_acc_link FROM users WHERE user_id = {user_id}')
         tt_user_link = tt_user_link.fetchone()[0]
 
         withdraw_amount = withdraw[3]
@@ -515,7 +523,7 @@ def get_first_unverified_withdraw_funds():
             else:
                 withdraw_id_list = [withdraw_id]
 
-            tt_user_link = cur.execute(f'SELECT tt_acc_link FROM users WHERE id = {first_unverified_withdraw_used_id}')
+            tt_user_link = cur.execute(f'SELECT tt_acc_link FROM users WHERE user_id = {first_unverified_withdraw_used_id}')
             tt_user_link = tt_user_link.fetchone()[0]
 
             withdraw_info = {'withdraw_id_list': withdraw_id_list, 'tt_user_link': tt_user_link,
@@ -529,13 +537,13 @@ def get_first_unverified_withdraw_funds():
 def increase_balance_tt(user_id, balance_increase):
     cur = conn.cursor()
 
-    count = cur.execute('''SELECT COUNT(id) FROM users WHERE id = ?''', (user_id,))
+    count = cur.execute('''SELECT COUNT(user_id) FROM users WHERE user_id = ?''', (user_id,))
 
     if count.fetchall()[0][0] == 1:
         user_id = int(user_id)
         balance_increase = int(balance_increase)
 
-        cur.execute('''UPDATE users SET balance = balance + ? WHERE id = ?''', (balance_increase, user_id,))
+        cur.execute('''UPDATE users SET balance = balance + ? WHERE user_id = ?''', (balance_increase, user_id,))
         conn.commit()
 
         return 'Баланс пользователя был успешно изменён.'
@@ -545,7 +553,7 @@ def increase_balance_tt(user_id, balance_increase):
 
 def change_balance_tt(user_id, new_balance):
     cur = conn.cursor()
-    cur.execute('''UPDATE users SET balance = ? WHERE id = ?''', (new_balance, user_id,))
+    cur.execute('''UPDATE users SET balance = ? WHERE user_id = ?''', (new_balance, user_id,))
     conn.commit()
 
     return True
@@ -559,5 +567,42 @@ def submit_withdraw(withdraw_id):
     conn.commit()
 
 
-def add_user_to_clip_abusers(user_id, order_id):
+# Todo доделать
+# def add_user_to_clip_abusers(user_id, order_id):
 
+
+def get_all_user_id():
+    user_id_fetchall = conn.execute('''SELECT user_id FROM users''').fetchall()
+
+    user_id_list = [user_id[0] for user_id in user_id_fetchall]
+
+    return user_id_list
+
+
+def add_user_to_clip_abusers(order_id, user_id):
+    clip_abusers_sql = conn.execute('''SELECT abusers FROM clips WHERE order_id = ?''',
+                                    (order_id,))
+    clip_abusers = clip_abusers_sql.fetchall()[0][0]
+
+    # преобразует словарь абьюзеров до нормального вида (list я так понимаю)
+    clip_abusers = eval(clip_abusers)
+
+    clip_abusers[user_id] = datetime.datetime.now()
+
+    conn.cursor().execute('''UPDATE clips SET abusers = ? WHERE order_id = ?''',
+                          (str(clip_abusers), order_id))
+    conn.commit()
+
+    return True
+
+
+def update_user_alltime_get_clips(clip_order_id, add_clip_count):
+    client_sql = conn.execute('''SELECT client FROM clips WHERE order_id = ?''',
+                              (clip_order_id,))
+    user_id = client_sql.fetchall()[0][0]
+
+    conn.cursor().execute('''UPDATE users SET alltime_get_clips = alltime_get_clips + ? 
+                            WHERE user_id = ?''', (add_clip_count, user_id))
+    conn.commit()
+
+    return True
