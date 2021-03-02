@@ -1,7 +1,6 @@
 import datetime
 import sqlite3
 import urllib.parse as url_parser
-import aiosqlite
 
 import requests
 from TikTokApi import TikTokApi
@@ -10,12 +9,6 @@ from bs4 import BeautifulSoup
 from config.settings import *
 
 conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
-
-
-# def __init__():
-#     conn = await aiosqlite.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
-
-# conn = await aiosqlite.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
 
 
 def save_tt_clip(**data):
