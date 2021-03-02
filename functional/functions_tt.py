@@ -6,7 +6,7 @@ import requests
 from TikTokApi import TikTokApi
 from bs4 import BeautifulSoup
 
-import paths
+import functional.paths as paths
 from config.settings import *
 
 conn = sqlite3.connect(paths.get_tt_db_path())

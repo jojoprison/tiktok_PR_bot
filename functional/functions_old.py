@@ -1,7 +1,7 @@
 import datetime
 import sqlite3
 
-import paths
+import functional.paths as paths
 from config.settings import *
 
 conn = sqlite3.connect(paths.get_old_db_path())
