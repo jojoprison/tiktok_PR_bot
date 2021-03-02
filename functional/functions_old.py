@@ -1,9 +1,10 @@
-import sqlite3
 import datetime
-import random
+import sqlite3
+
+import paths
 from config.settings import *
 
-conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\data.db')
+conn = sqlite3.connect(paths.get_old_db_path())
 
 
 def is_user_in_db(user_Id):
