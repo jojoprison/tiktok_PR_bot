@@ -1,7 +1,6 @@
 import asyncio
 import random
 import time
-import urllib.parse as url_parser
 
 from aiogram import Bot, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -13,8 +12,6 @@ from aiogram.utils import executor
 from aiogram.utils.exceptions import BotBlocked
 from aiogram.utils.helper import Helper, ListItem
 
-from functional.functions_old import *
-from functional.functions_tt import *
 from payment.qiwi.payment import *
 from utility.messages import *
 
