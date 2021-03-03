@@ -1,9 +1,11 @@
 import sqlite3
 from random import randint
-import requests
-import json
 
-conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
+import requests
+
+import functional.paths as paths
+
+conn = sqlite3.connect(paths.get_tt_db_path())
 
 QIWI_TOKEN = '543fa02d3b1823ca6a9d536ca749dba7'
 QIWI_ACCOUNT = '+79100938360'

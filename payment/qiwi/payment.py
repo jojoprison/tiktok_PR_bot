@@ -1,11 +1,17 @@
-import sqlite3
-import requests
-from payment.qiwi.comment_generation import generate_comment
 import datetime
+import sqlite3
 
-conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
+import requests
 
-QIWI_TOKEN = '543fa02d3b1823ca6a9d536ca749dba7'
+import functional.paths as paths
+from payment.qiwi.comment_generation import generate_comment
+
+conn = sqlite3.connect(paths.get_tt_db_path())
+
+# мой киви токен: 543fa02d3b1823ca6a9d536ca749dba7
+# киви токен Димаса
+QIWI_TOKEN = 'bcfa9c2d9819ee7e6fb414736032365f'
+# и его тел сответственно
 QIWI_ACCOUNT = '+79301042966'
 
 
