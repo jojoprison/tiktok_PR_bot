@@ -1,10 +1,5 @@
 from TikTokApi import TikTokApi
-from datetime import datetime
-import pytz
-import requests
-from bs4 import BeautifulSoup
-import urllib.request
-import urllib.parse as url_parser
+
 from config.settings import TT_VERIFY_FP
 
 s_v_web_id = 'verify_kh96hlyt_z40z1rRE_jkcF_4HXZ_AABt_wf2Q6wPRX0Cq'
