@@ -1,6 +1,8 @@
 import sqlite3
 
-conn = sqlite3.connect('ttdb.db')
+import functional.paths as paths
+
+conn = sqlite3.connect(paths.get_tt_db_path())
 
 
 def tt_tasks_table():
@@ -19,6 +21,7 @@ def tt_tasks_table():
 def main_table():
     conn.execute('''CREATE TABLE users (id integer, balance integer, alltime_videos integer, referals text)''')
     conn.commit()
+
 
 tt_tasks_table()
 

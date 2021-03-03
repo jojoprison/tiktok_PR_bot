@@ -166,6 +166,7 @@ def add_user_to_db_tt(new_user_id, **ref_father):
         referrals_of_ref_father = str(referrals_of_ref_father)
 
         cur.execute(f'''UPDATE users SET referrals = ? WHERE user_id = ?''', (referrals_of_ref_father, ref_father,))
+        # TODO закидывать бабки за рефку ток если чел сделает несколько заданий
         cur.execute('''UPDATE users SET balance = (balance + ?) WHERE user_id = ?''', (REF_BONUS, ref_father,))
 
         conn.commit()
