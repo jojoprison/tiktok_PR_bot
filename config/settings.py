@@ -24,4 +24,4 @@ LINK_TO_INTRODUCTION_AND_RULES = 'https://graph.org/Vvedenie-v-bota-a-takzhe-pra
 LINK_TO_CHAT_OF_BOT = '@sqDfs'
 
 # TODO куки для тиктока (обновлять)
-TT_VERIFY_FP = 'verify_kerlbryp_wMxNwgNV_U325_4kmy_9vQy_PWkD5xiy6GNX'
+TT_VERIFY_FP = 'verify_klv5c5xg_nEikqRKz_up6a_4o0n_Bzh2_qD4CuJUGbEDh'

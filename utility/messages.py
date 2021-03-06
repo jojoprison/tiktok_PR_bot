@@ -55,8 +55,8 @@ WRONG_WITHDRAW_FUNDS_LOCATION = 'Неверное введен номер тел
                                 'Пожалуйста, повторите ввод:'
 
 
-def SEND_CLIP_COUNT(user_id, link):
-    balance = user_balance_tt(user_id)
+async def SEND_CLIP_COUNT(user_id, link):
+    balance = await get_user_balance_tt(user_id)
 
     send_sub_count = f'😀 Хорошо. Вы прислали {link}' \
                      f'\nТеперь отправьте нужное вам количество клипов на этот трек.' \
@@ -80,24 +80,24 @@ def SEND_SUB_COUNT_1(m):
     return send_sub_count
 
 
-def NEW_REFERRAL(argument):
+async def NEW_REFERRAL(argument):
     new_referral_message = f'🥳 Поздравляем, у вас новый реферал!' \
-                           f'\nВсего рефералов: {get_referrals_count(argument)}'
+                           f'\nВсего рефералов: {await get_referrals_count(argument)}'
 
     return new_referral_message
 
 
-def PROFILE(m):
+async def PROFILE(m):
     user_id = m.from_user.id
 
     profile = f'👤 Имя: {m.from_user.first_name}' \
               f'\n📟 ID: `{user_id}`' \
-              f'\n💰 Баланс: {tt_user_balance(user_id)} RUB' \
-              f'\nTT Аккаунт: {tt_account_link(user_id)}' \
-              f'\n💪 Сделано клипов: {alltime_clips(user_id)}' \
-              f'\n🤝 Получено клипов: {alltime_get_clips(user_id)}'
+              f'\n💰 Баланс: {await get_user_balance_tt(user_id)} RUB' \
+              f'\nTT Аккаунт: {await get_tt_account_link(user_id)}' \
+              f'\n💪 Сделано клипов: {await get_alltime_clips(user_id)}' \
+              f'\n🤝 Получено клипов: {await alltime_get_clips(user_id)}' \
+              f'\n👣 Количество рефералов: {await get_referrals_count(user_id)}'
     # f'\n🤥 Оштрафовано всего на: {fine_count(m.from_user.id)} RUB' \
-    # f'\n👣 Количество рефералов: {referals(m.from_user.id)}'
 
     return profile
 
@@ -241,7 +241,7 @@ def MAILING_END(all, die):
 # TODO допилить инструкцию
 TOP_UP_BALANCE = 'Баланс предпочтительно пополнять с помощью сервиса QIWI Wallet. ' \
                  'Для пополнения баланса другими способами напишите @mkxgod' \
-                 '\nВведите сумму пополнения:'
+                 '\n\nВведите сумму пополнения:'
 
 
 def WITHDRAW_FUNDS(balance):
@@ -273,10 +273,12 @@ def WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_location):
 
 
 def ADMIN_WITHDRAW_LIST(withdraw_info):
-    withdraw_string = f'<b>TT:</b> <a href="{withdraw_info["tt_user_link"]}">ЮЗЕР (юзает по носу ска)</a>, ' \
-                      f'<b>способ:</b> <code>{withdraw_info["location"]}</code>, ' \
-                      f'<b>сумма:</b> <code>{withdraw_info["withdraw_amount"]}</code>, ' \
-                      f'<b>номер карты/телефона:</b> <code>{withdraw_info["number"]}</code>'
+    withdraw_string = f'<b>TT:</b> <a href="{withdraw_info["tt_user_link"]}">ЮЗЕР (юзает по носу ска)</a>' \
+                      f'\n<b>способ:</b> <code>{withdraw_info["location"]}</code>' \
+                      f'\n<b>сумма:</b> <code>{withdraw_info["withdraw_amount"]}</code>' \
+                      f'\n<b>номер карты/телефона:</b> <code>{withdraw_info["number"]}</code>' \
+                      f'\n<b>рефов:</b> {withdraw_info["user_ref_count"]}' \
+                      f'\n<b>заданий сделал:</b> {withdraw_info["user_alltime_clips"]}'
     # string_list.append(withdraw_string)
 
     return withdraw_string

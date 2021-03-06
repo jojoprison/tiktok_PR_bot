@@ -1,3 +1,3 @@
 from functional.functions_tt import *
 
-print(get_all_user_id())
+print(await get_all_user_id())
