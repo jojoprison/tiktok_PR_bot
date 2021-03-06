@@ -1,18 +1,22 @@
+import asyncio
 import datetime
-import sqlite3
 import urllib.parse as url_parser
 
+import pytz
 import requests
 from TikTokApi import TikTokApi
 from bs4 import BeautifulSoup
 
-import functional.paths as paths
 from config.settings import *
+from db.db_connect import conn
 
-conn = sqlite3.connect(paths.get_tt_db_path())
+
+# conn = None
+
+# conn = sqlite3.connect(paths.get_tt_db_path())
 
 
-def save_tt_clip(**data):
+async def save_tt_clip(**data):
     client_id = data['client']
     clip_link = data['clip_link']
     clip_id = data['clip_id']
@@ -25,52 +29,50 @@ def save_tt_clip(**data):
 
     # TODO подумать как по другому проверять параметры на валидность
     if client_id:
-        cur = conn.cursor()
-        cur.execute(
-            '''INSERT INTO clips(client, tt_clip_link, tt_clip_id, tt_music_id, goal, status, abusers, date) 
-            VALUES(?,?,?,?,?,?,?,?)''',
-            (client_id, clip_link, clip_id, music_id, goal, 2, str({}), datetime.datetime.now()))
-        conn.commit()
+        async with conn.transaction():
+            await conn.execute('INSERT INTO clips(client, tt_clip_link, tt_clip_id, tt_music_id, '
+                               'goal, status, abusers, date) VALUES($1, $2, $3, $4, $5, $6, $7, $8)',
+                               (client_id, clip_link, clip_id, music_id, goal, 2,
+                                str({}), datetime.datetime.now()))
 
-        order_id = cur.execute('''SELECT MAX(order_id) FROM clips''').fetchall()[0][0]
+        order_id = await conn.fetchval('SELECT MAX(order_id) FROM clips')
 
         return order_id
 
 
-def update_tt_video_goal(goal):
-    cur = conn.cursor()
+async def update_tt_video_goal(goal):
+    last_order_id = await conn.fetchval('SELECT MAX(order_id) FROM clips')
 
-    last_order_id = cur.execute('''SELECT MAX(order_id) FROM clips''').fetchall()[0][0]
-
-    cur.execute('''UPDATE clips SET goal = ? WHERE order_id = ?''', (goal, last_order_id,))
-    conn.commit()
+    async with conn.transaction():
+        await conn.execute('UPDATE clips SET goal = $2 WHERE order_id = $1',
+                           last_order_id, goal)
 
     return last_order_id
 
 
-def add_tt_acc_to_user(user_id, tt_acc_link):
-    cur = conn.cursor()
-
-    cur.execute('''UPDATE users SET tt_acc_link = ? WHERE user_id = ?''', (tt_acc_link, user_id,))
-    conn.commit()
+async def add_tt_acc_to_user(user_id, tt_acc_link):
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET tt_acc_link = $2 WHERE user_id = $1',
+                           user_id, tt_acc_link)
 
     return True
 
 
 async def clips_for_work(user_id):
-    clip_list = conn.execute('SELECT order_id, tt_clip_link, goal, abusers FROM clips '
-                             'WHERE status = 1 AND goal >= 1')
-    clip_list = clip_list.fetchall()
+    clip_list = await conn.fetch(
+        'SELECT order_id, tt_clip_link, goal, abusers FROM clips '
+        'WHERE status = 1 AND goal >= 1'
+    )
 
     if len(clip_list) >= 1:
 
         good_clips = {}
 
         for clip_info in clip_list:
-            order_id = clip_info[0]
-            tt_clip_link = clip_info[1]
-            goal = clip_info[2]
-            abusers = clip_info[3]
+            order_id = clip_info['order_id']
+            tt_clip_link = clip_info['tt_clip_link']
+            goal = clip_info['goal']
+            abusers = clip_info['abusers']
 
             # число записавших меньше нужного числа и пользователь еще не записывал видос
             if len(eval(abusers)) < goal and user_id not in eval(abusers):
@@ -89,18 +91,20 @@ async def clips_for_work(user_id):
 
 
 # TODO сделать таймаут для пропущенных видосов (допустим по 10 минут с проверкой после нажатия кнопки юзером)
-def get_skipped_videos(user_id):
-    cur = conn.cursor()
+async def get_skipped_videos(user_id):
+    skipped_clips_str = await conn.fetchval(
+        'SELECT skipped_videos FROM users WHERE user_id = $1',
+        user_id
+    )
 
-    videos = cur.execute('''SELECT skipped_videos FROM users WHERE user_id = ?''', (user_id,))
-    skipped_videos_fetchall = videos.fetchall()
-
-    skipped_clips = eval(skipped_videos_fetchall[0][0])
+    # преобразуем строку до дикта (в базе хранится в типе text)
+    skipped_clips = eval(skipped_clips_str)
 
     return skipped_clips
 
 
-def edit_promo_status(number, status):
+# TODO переписать под asyncpg
+async def edit_promo_status(number, status):
     cur = conn.cursor()
     sql = cur.execute('''SELECT COUNT(order_id), tt_clip_id, client, goal, status, abusers
                         FROM clips WHERE order_id = ?''', (number,))
@@ -133,132 +137,141 @@ def edit_promo_status(number, status):
         return client_id
 
 
-def delete_tt_clip_from_promo_db(number):
-    number = int(number)
+async def delete_tt_clip_from_promo_db(order_id):
+    status = await conn.fetchval(
+        'SELECT status FROM clips WHERE order_id = $1',
+        order_id
+    )
 
-    status = conn.execute('''SELECT status FROM clips WHERE order_id = ?''', (number,))
-
-    if status.fetchall()[0][0] != 1:
-        conn.cursor().execute('''DELETE FROM clips WHERE order_id = ?''', (number,))
-        conn.commit()
+    if status != 1:
+        async with conn.transaction():
+            await conn.execute('DELETE FROM clips WHERE order_id = $1',
+                               order_id)
         return True
     else:
         return False
 
 
-def is_user_in_db_tt(used_id):
-    count_of_user_id_in_db = conn.execute(f'''SELECT COUNT(user_id) FROM users WHERE user_id = {used_id}''')
-    return count_of_user_id_in_db.fetchall()[0][0]
+async def is_user_in_db_tt(used_id):
+    count_of_user_id_in_db = await conn.fetchval(
+        'SELECT COUNT(user_id) FROM users WHERE user_id = $1',
+        used_id
+    )
+
+    return count_of_user_id_in_db
 
 
-def add_user_to_db_tt(new_user_id, **ref_father):
+async def add_user_to_db_tt(new_user_id, **ref_father):
     if ref_father:
         ref_father = ref_father['ref_father']
 
-        cur = conn.cursor()
-        cur.execute(
-            '''INSERT INTO users(user_id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips, ref_father) 
-                VALUES(?,?,?,?,?,?,?)''', (new_user_id, 0, 0, str([]), str({}), 0, ref_father))
+        async with conn.transaction():
+            await conn.execute('INSERT INTO users(user_id, balance, alltime_clips, referrals, '
+                               'skipped_videos, alltime_get_clips, ref_father)'
+                               'VALUES($1, $2 , $3, $4, $5, $6, $7)',
+                               new_user_id, 0, 0, str([]), str({}), 0, ref_father)
 
-        referrals_of_ref_father = conn.execute(f'''SELECT referrals FROM users WHERE user_id = ?''', (ref_father,))
-        referrals_of_ref_father = eval(referrals_of_ref_father.fetchall()[0][0])
+        referrals_of_ref_father = await conn.fetchval(
+            'SELECT referrals FROM users WHERE user_id = $1',
+            ref_father
+        )
+        referrals_of_ref_father = eval(referrals_of_ref_father)
         referrals_of_ref_father.append(new_user_id)
         referrals_of_ref_father = str(referrals_of_ref_father)
 
-        cur.execute(f'''UPDATE users SET referrals = ? WHERE user_id = ?''', (referrals_of_ref_father, ref_father,))
-        # TODO закидывать бабки за рефку ток если чел сделает несколько заданий
-        cur.execute('''UPDATE users SET balance = (balance + ?) WHERE user_id = ?''', (REF_BONUS, ref_father,))
-
-        conn.commit()
+        async with conn.transaction():
+            await conn.execute('UPDATE users SET referrals = $2 WHERE user_id = $1',
+                               ref_father, referrals_of_ref_father)
     else:
-        conn.cursor().execute(
-            '''INSERT INTO users(user_id, balance, alltime_clips, referrals, skipped_videos, alltime_get_clips) 
-                VALUES(?,?,?,?,?,?)''', (new_user_id, 0, 0, str([]), str({}), 0))
-        conn.commit()
+        async with conn.transaction():
+            await conn.execute('INSERT INTO users(user_id, balance, alltime_clips, referrals, '
+                               'skipped_videos, alltime_get_clips)'
+                               'VALUES($1, $2, $3, $4, $5, $6)',
+                               (new_user_id, 0, 0, str([]), str({}), 0))
 
 
-def add_video_to_skipped(user_id, clip_id):
-    clip_id = int(clip_id)
-
-    skipped_clips_sql = conn.execute('''SELECT skipped_videos FROM users WHERE user_id = ?''', (user_id,))
-    skipped_videos = skipped_clips_sql.fetchall()[0][0]
+async def add_video_to_skipped(user_id, clip_id):
+    skipped_videos = await conn.fetchval(
+        'SELECT skipped_videos FROM users WHERE user_id = $1',
+        user_id
+    )
 
     # преобразует словарь пропущенных видосов до нормального вида (list я так понимаю)
     skipped_videos = eval(skipped_videos)
 
     skipped_videos[clip_id] = datetime.datetime.now()
-    conn.cursor().execute('''UPDATE users SET skipped_videos = ? WHERE user_id = ?''', (str(skipped_videos), user_id))
-    conn.commit()
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET skipped_videos = $2 WHERE user_id = $1',
+                           user_id, (str(skipped_videos)))
 
 
-def user_balance_tt(user_id):
-    balance = conn.execute(f'''SELECT balance FROM users WHERE user_id = ?''', (user_id,))
-    balance = balance.fetchall()[0][0]
-
-    return balance
-
-
-async def user_balance_tt_aio(user_id):
-    async with conn.execute(f'''SELECT balance FROM users WHERE user_id = ?''', (user_id,)) as cursor:
-        async for row in cursor:
-            print(row)
-
-
-def get_video_stat(client_id):
-    cur = conn.cursor()
-
-    last_order_id_sql = cur.execute('''SELECT MAX(order_id) FROM clips WHERE client = ?''', (client_id,))
-    last_order_id = last_order_id_sql.fetchall()[0][0]
+async def get_video_stat(client_id):
+    last_order_id = await conn.fetchval(
+        'SELECT MAX(order_id) FROM clips WHERE client = $1',
+        client_id
+    )
 
     return last_order_id
 
 
-def confirm_clip_promo(order_id):
+async def confirm_clip_promo(order_id):
     try:
-        order_id = int(order_id)
-
-        prom_info = conn.execute('''SELECT client, goal FROM clips WHERE order_id = ?''', (order_id,))
-        prom_info = prom_info.fetchall()[0]
+        prom_info = await conn.fetchrow(
+            'SELECT client, goal FROM clips WHERE order_id = $1',
+            order_id
+        )
 
         client_id = prom_info[0]
         # общая суммка заказа с учетом стоимости одного клипа
         clip_goal = prom_info[1] * CASH_MIN
 
-        conn.execute('''UPDATE clips SET status = 1 WHERE order_id = ?''', (order_id,))
-        conn.execute('''UPDATE users SET balance = balance - ? WHERE user_id = ?''', (clip_goal, client_id,))
-        conn.commit()
+        async with conn.transaction():
+            await conn.execute('UPDATE clips SET status = 1 WHERE order_id = $1',
+                               order_id)
+            await conn.execute('UPDATE users SET balance = balance - $2 WHERE user_id = $1',
+                               client_id, clip_goal)
 
         return True
     except Exception as e:
         return e
 
 
-def tt_user_balance(user_id):
-    balance = conn.execute(f'''SELECT balance FROM users WHERE user_id = ?''', (user_id,))
-    balance = balance.fetchall()[0][0]
+async def get_user_balance_tt(user_id):
+    # TODO разобраться че лучше юзать: пулл или коннект и как лучше юзать пулл
+    # async with conn.acquire() as connection:
+    balance = await conn.fetchval(
+        'SELECT balance FROM users WHERE user_id = $1',
+        user_id,
+    )
 
     return balance
 
 
-def tt_account_link(user_id):
-    tt_acc_link = conn.execute(f'''SELECT tt_acc_link FROM users WHERE user_id = ?''', (user_id,))
-    tt_acc_link = tt_acc_link.fetchall()[0][0]
+async def get_tt_account_link(user_id):
+    tt_acc_link = await conn.fetchval(
+        'SELECT tt_acc_link FROM users WHERE user_id = $1',
+        user_id,
+    )
 
     return tt_acc_link
 
 
-def alltime_clips(user_id):
-    clips = conn.execute(f'''SELECT alltime_clips FROM users WHERE user_id = {user_id}''')
-    clips = clips.fetchall()[0][0]
+async def get_alltime_clips(user_id):
+    alltime_clips = await conn.fetchval(
+        'SELECT alltime_clips FROM users WHERE user_id = $1',
+        user_id,
+    )
 
-    return clips
+    return alltime_clips
 
 
-def alltime_get_clips(user_id):
-    clips = conn.execute(f'''SELECT alltime_get_clips FROM users WHERE user_id = {user_id}''')
-    clips = clips.fetchall()[0][0]
+async def alltime_get_clips(user_id):
+    alltime_get_clips = await conn.fetchval(
+        'SELECT alltime_get_clips FROM users WHERE user_id = $1',
+        user_id,
+    )
 
-    return clips
+    return alltime_get_clips
 
 
 def get_tt_acc_name(url):
@@ -278,19 +291,22 @@ def get_tt_acc_name(url):
     return username.get_text()
 
 
-def update_tt_acc_username_by_id(user_id):
-    tt_acc_link = conn.execute(f'SELECT tt_acc_link FROM users WHERE user_id = ?', (user_id,))
-    tt_acc_link = tt_acc_link.fetchall()[0][0]
+async def update_tt_acc_username(user_id):
+    tt_acc_link = await conn.fetchval(
+        'SELECT tt_acc_link FROM users WHERE user_id = $1',
+        user_id,
+    )
 
     tt_acc_username = get_tt_acc_name(tt_acc_link)
 
-    cur = conn.cursor()
-    cur.execute('''UPDATE users SET tt_acc_username = ? WHERE user_id = ?''', (tt_acc_username, user_id))
-    conn.commit()
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET tt_acc_username = $1 WHERE user_id = $2',
+                           tt_acc_username, user_id)
 
-    return True
+    return tt_acc_username
 
 
+# TODO пока не юзается
 def update_tt_acc_username_all():
     user_tt_links = conn.execute(f'SELECT user_id, tt_acc_link FROM users WHERE tt_acc_username IS NULL')
     user_tt_links = user_tt_links.fetchall()
@@ -314,36 +330,43 @@ def update_tt_acc_username_all():
         conn.commit()
 
 
-def is_return_clip_in_queue(user_id, clip_id):
-    clip_id = int(clip_id)
-
-    skipped_clips_sql = conn.execute('''SELECT skipped_videos FROM users WHERE user_id = ?''', (user_id,))
-    skipped_videos = skipped_clips_sql.fetchall()[0][0]
+async def is_return_clip_in_queue(user_id, clip_id):
+    skipped_clips = await conn.fetchval(
+        'SELECT skipped_videos FROM users WHERE user_id = $1',
+        user_id,
+    )
 
     # преобразует словарь пропущенных видосов до нормального вида (list я так понимаю)
-    skipped_videos = eval(skipped_videos)
+    skipped_clips = eval(skipped_clips)
 
     # удаляем клип из списка пропущенных
-    del skipped_videos[clip_id]
+    del skipped_clips[clip_id]
 
-    conn.cursor().execute('''UPDATE users SET skipped_videos = ? WHERE user_id = ?''', (str(skipped_videos), user_id))
-    conn.commit()
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET skipped_videos = $2 WHERE user_id = $1',
+                           user_id, (str(skipped_clips)))
 
 
 # TODO проверка существования клипа на данную музыку
 async def check_clip_for_paying(user_id, video_id):
-    cur = conn.cursor()
-    cur.execute(
-        '''INSERT INTO tasks(user_id, tt_clip_id, status, date) 
-        VALUES(?,?,?,?)''', (user_id, video_id, 2, datetime.datetime.now()))
-    conn.commit()
+    async with conn.transaction():
+        await conn.execute('INSERT INTO tasks(user_id, tt_clip_id, status, date) '
+                           'VALUES($1, $2, $3, $4)',
+                           user_id, video_id, 2, datetime.datetime.now())
 
-    # TODO пока заглушка на проверку из-за неработоспособности TT
-    # tt_acc_username = conn.execute(f'SELECT tt_acc_username FROM users WHERE id = ?', (user_id,))
-    # tt_acc_username = tt_acc_username.fetchall()[0][0]
+    # заглушка для TT
+    # tt_acc_username = await conn.fetchval(
+    #     'SELECT tt_acc_username FROM users WHERE user_id =  $1',
+    #     user_id,
+    # )
+    #
+    # if not tt_acc_username:
+    #     tt_acc_username = await update_tt_acc_username(user_id)
+    #
     # tt_acc_username = tt_acc_username.replace(' ', '')
-
-    # tt_api = await TikTokApi.get_instance()
+    #
+    # # TODO доделать апи
+    # tt_api = asyncio.get_event_loop().run_in_executor(TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP))
     #
     # tt_data = await tt_api.getUser(tt_acc_username)
     #
@@ -404,68 +427,90 @@ def get_clip_id_from_url(url):
     return clip_id
 
 
-def deposit_money_to_balance(user_id, payment_amount):
-    cur = conn.cursor()
-
-    user_balance = conn.execute(f'''SELECT balance FROM users WHERE user_id = ?''', (user_id,))
-    user_balance = user_balance.fetchall()[0][0]
+async def deposit_money_to_balance(user_id, payment_amount):
+    user_balance = await conn.fetchval(
+        'SELECT balance FROM users WHERE user_id =  $1',
+        user_id,
+    )
 
     user_new_balance = user_balance + payment_amount
 
-    cur.execute('''UPDATE users SET balance = ? WHERE user_id = ?''', (user_new_balance, user_id))
-    conn.commit()
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET balance = $2 WHERE user_id = $1',
+                           user_id, user_new_balance)
 
 
-def get_referrals_count(user_id):
-    ref_count = conn.execute(f'SELECT referrals FROM users WHERE user_id = {user_id}')
+async def get_referrals_count(user_id):
+    ref_count = await conn.fetchval(
+        'SELECT COUNT(referrals) FROM users WHERE user_id = $1',
+        user_id,
+    )
 
-    count = eval(ref_count.fetchall()[0][0])
-    count = len(count)
-
-    return count
+    return ref_count
 
 
 # TODO придумать куда воткнуть либо удалить
-def pay_all_completed_tasks():
-    cur = conn.cursor()
+async def pay_all_completed_tasks():
+    users_to_pay = await conn.fetch(
+        'SELECT user_id FROM tasks WHERE status = 2'
+    )
 
-    users_to_pay = cur.execute('SELECT user_id FROM tasks WHERE status = 2')
-    users_to_pay = users_to_pay.fetchall()
     print(users_to_pay)
 
 
-def pay_completed_user_tasks(user_id):
-    cur = conn.cursor()
+async def pay_all_completed_user_tasks(user_id):
+    clip_payment_count = await conn.fetchval(
+        'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status = 2',
+        user_id
+    )
 
-    clip_payment_count = cur.execute(f'SELECT count() FROM tasks WHERE user_id = {user_id} AND status = 2')
-    clip_payment_count = clip_payment_count.fetchone()[0]
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET balance = balance + $2,'
+                           'alltime_clips = alltime_clips + $3 WHERE user_id = $1',
+                           user_id, clip_payment_count * CLIP_PAYMENT, clip_payment_count)
 
-    cur.execute('''UPDATE users SET balance = balance + ?,
-                                    alltime_clips = alltime_clips + ? WHERE user_id = ?''',
-                (clip_payment_count * CLIP_PAYMENT, clip_payment_count, user_id))
-    cur.execute(f'UPDATE tasks SET status = 1 WHERE user_id = {user_id}')
-    conn.commit()
+        await conn.execute('UPDATE tasks SET status = 1 WHERE user_id = $1',
+                           user_id)
 
     return clip_payment_count * CLIP_PAYMENT
 
 
-def get_unverified_withdraw_funds():
-    cur = conn.cursor()
+# TODO доделать для оплаты таски
+async def pay_completed_user_task(user_id, task_id):
+    clip_payment_count = await conn.fetchval(
+        'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status = 2',
+        user_id
+    )
 
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET balance = balance + $2,'
+                           'alltime_clips = alltime_clips + $3 WHERE user_id = $1',
+                           user_id, clip_payment_count * CLIP_PAYMENT, clip_payment_count)
+
+        await conn.execute('UPDATE tasks SET status = 1 WHERE user_id = $1',
+                           user_id)
+
+    return clip_payment_count * CLIP_PAYMENT
+
+
+async def get_unverified_withdraw_funds():
     result_withdraw_list = {}
 
-    withdraw_list = cur.execute('SELECT user_id, location, number, funds_amount FROM withdraw_funds WHERE status = 2')
-    withdraw_list = withdraw_list.fetchall()
+    withdraw_list = await conn.fetch(
+        'SELECT user_id, location, number, funds_amount FROM withdraw_funds WHERE status = 2',
+    )
 
     for withdraw in withdraw_list:
         user_id = withdraw[0]
 
-        tt_user_link = cur.execute(f'SELECT tt_acc_link FROM users WHERE user_id = {user_id}')
-        tt_user_link = tt_user_link.fetchone()[0]
+        tt_user_link = await conn.fetchval(
+            'SELECT tt_acc_link FROM users WHERE user_id = $1',
+            user_id
+        )
 
-        withdraw_amount = withdraw[3]
-        location = withdraw[1]
-        number = withdraw[2]
+        withdraw_amount = withdraw['funds_amount']
+        location = withdraw['location']
+        number = withdraw['number']
 
         if user_id in result_withdraw_list.keys():
             old_withdraw_amount = result_withdraw_list[user_id]['withdraw_amount']
@@ -479,29 +524,24 @@ def get_unverified_withdraw_funds():
     return result_withdraw_list
 
 
-def get_first_unverified_withdraw_funds():
-    cur = conn.cursor()
-
+async def get_first_unverified_withdraw_funds():
     result_withdraw = {}
 
-    first_unverified_withdraw = cur.execute('SELECT user_id, location, number FROM withdraw_funds '
-                                            'WHERE status = 2')
-    first_unverified_withdraw = first_unverified_withdraw.fetchone()
+    first_unverified_withdraw = await conn.fetchrow(
+        'SELECT user_id, location, number FROM withdraw_funds WHERE status = 2',
+    )
 
     if first_unverified_withdraw:
-        first_unverified_withdraw_used_id = first_unverified_withdraw[0]
-        first_unverified_withdraw_location = first_unverified_withdraw[1]
-        first_unverified_withdraw_number = first_unverified_withdraw[2]
+        first_unverified_withdraw_used_id = first_unverified_withdraw['user_id']
+        first_unverified_withdraw_location = first_unverified_withdraw['location']
+        first_unverified_withdraw_number = first_unverified_withdraw['number']
 
-        user_withdraw_info_list = cur.execute(f'''SELECT withdraw_id, location, number, funds_amount
-                                                FROM withdraw_funds
-                                                WHERE user_id = ?
-                                                and status = 2
-                                                and location = ?
-                                                and number = ?''', (first_unverified_withdraw_used_id,
-                                                                    first_unverified_withdraw_location,
-                                                                    first_unverified_withdraw_number))
-        user_withdraw_info_list = user_withdraw_info_list.fetchall()
+        user_withdraw_info_list = await conn.fetch(
+            'SELECT withdraw_id, location, number, funds_amount FROM withdraw_funds '
+            'WHERE user_id = $1 and status = 2 and location = $2 and number = $3',
+            first_unverified_withdraw_used_id, first_unverified_withdraw_location,
+            first_unverified_withdraw_number
+        )
 
         for user_withdraw_info in user_withdraw_info_list:
             withdraw_id = user_withdraw_info[0]
@@ -518,86 +558,104 @@ def get_first_unverified_withdraw_funds():
             else:
                 withdraw_id_list = [withdraw_id]
 
-            tt_user_link = cur.execute(f'SELECT tt_acc_link FROM users WHERE user_id = {first_unverified_withdraw_used_id}')
-            tt_user_link = tt_user_link.fetchone()[0]
+            tt_user_link = await conn.fetchval(
+                'SELECT tt_acc_link FROM users WHERE user_id = $1',
+                first_unverified_withdraw_used_id
+            )
 
-            withdraw_info = {'withdraw_id_list': withdraw_id_list, 'tt_user_link': tt_user_link,
-                             'location': location, 'number': number, 'withdraw_amount': withdraw_amount}
+            withdraw_info = {'withdraw_id_list': withdraw_id_list, 'user_id': first_unverified_withdraw_used_id,
+                             'tt_user_link': tt_user_link, 'location': location,
+                             'number': number, 'withdraw_amount': withdraw_amount}
 
             result_withdraw[first_unverified_withdraw_used_id] = withdraw_info
 
     return result_withdraw
 
 
-def increase_balance_tt(user_id, balance_increase):
-    cur = conn.cursor()
+async def increase_balance_tt(user_id, balance_increase):
+    count = await conn.fetchval(
+        'SELECT COUNT(user_id) FROM users WHERE user_id = $1',
+        user_id
+    )
 
-    count = cur.execute('''SELECT COUNT(user_id) FROM users WHERE user_id = ?''', (user_id,))
-
-    if count.fetchall()[0][0] == 1:
+    if count == 1:
         user_id = int(user_id)
         balance_increase = int(balance_increase)
 
-        cur.execute('''UPDATE users SET balance = balance + ? WHERE user_id = ?''', (balance_increase, user_id,))
-        conn.commit()
+        async with conn.transaction():
+            await conn.execute('UPDATE users SET balance = balance + $2 WHERE user_id = $1',
+                               user_id, balance_increase)
 
         return 'Баланс пользователя был успешно изменён.'
     else:
         return 'Пользователь не был найден в БД или количесиво записей для его id != 1.'
 
 
-def change_balance_tt(user_id, new_balance):
-    cur = conn.cursor()
-    cur.execute('''UPDATE users SET balance = ? WHERE user_id = ?''', (new_balance, user_id,))
-    conn.commit()
+async def change_balance_tt(user_id, new_balance):
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET balance = $2 WHERE user_id = $1',
+                           user_id, new_balance)
 
     return True
 
 
 # TODO доделать
-def submit_withdraw(withdraw_id):
-    cur = conn.cursor()
-
-    cur.execute('''UPDATE withdraw_funds SET status = 1 WHERE withdraw_id = ?''', (withdraw_id,))
-    conn.commit()
+async def submit_withdraw(withdraw_id):
+    async with conn.transaction():
+        await conn.execute('UPDATE withdraw_funds SET status = 1 WHERE withdraw_id = $1',
+                           withdraw_id)
 
 
 # Todo доделать
 # def add_user_to_clip_abusers(user_id, order_id):
 
 
-def get_all_user_id():
-    user_id_fetchall = conn.execute('''SELECT user_id FROM users''').fetchall()
+async def get_all_user_id():
+    user_id_list = await conn.fetch(
+        'SELECT user_id FROM users'
+    )
 
-    user_id_list = [user_id[0] for user_id in user_id_fetchall]
+    user_id_list = [user_id[0] for user_id in user_id_list]
 
     return user_id_list
 
 
-def add_user_to_clip_abusers(order_id, user_id):
-    clip_abusers_sql = conn.execute('''SELECT abusers FROM clips WHERE order_id = ?''',
-                                    (order_id,))
-    clip_abusers = clip_abusers_sql.fetchall()[0][0]
+async def add_user_to_clip_abusers(order_id, user_id):
+    clip_abusers = await conn.fetchval('SELECT abusers FROM clips WHERE order_id = $1',
+                                       order_id)
 
     # преобразует словарь абьюзеров до нормального вида (list я так понимаю)
     clip_abusers = eval(clip_abusers)
 
     clip_abusers[user_id] = datetime.datetime.now()
 
-    conn.cursor().execute('''UPDATE clips SET abusers = ? WHERE order_id = ?''',
-                          (str(clip_abusers), order_id))
-    conn.commit()
+    async with conn.transaction():
+        await conn.execute('UPDATE clips SET abusers = $2 WHERE order_id = $1',
+                           order_id, str(clip_abusers))
 
     return True
 
 
-def update_user_alltime_get_clips(clip_order_id, add_clip_count):
-    client_sql = conn.execute('''SELECT client FROM clips WHERE order_id = ?''',
-                              (clip_order_id,))
-    user_id = client_sql.fetchall()[0][0]
+async def update_user_alltime_get_clips(clip_order_id, add_clip_count):
+    user_id = await conn.fetchval('SELECT client FROM clips WHERE order_id = $1',
+                                  clip_order_id)
 
-    conn.cursor().execute('''UPDATE users SET alltime_get_clips = alltime_get_clips + ? 
-                            WHERE user_id = ?''', (add_clip_count, user_id))
-    conn.commit()
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET alltime_get_clips = alltime_get_clips + $2 '
+                           'WHERE user_id = $1', user_id, add_clip_count)
 
     return True
+
+
+async def pay_by_referral(user_id):
+    ref_father = await conn.fetchval('SELECT ref_father FROM users WHERE user_id = $1',
+                                     user_id)
+
+    if ref_father:
+        async with conn.transaction():
+            await conn.execute('UPDATE users SET balance = (balance + $2) WHERE user_id = $1',
+                               ref_father, REF_BONUS)
+
+        return ref_father
+
+    return None

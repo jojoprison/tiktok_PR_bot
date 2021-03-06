@@ -1,4 +1,3 @@
-import asyncio
 import random
 import time
 
@@ -14,6 +13,7 @@ from aiogram.utils.helper import Helper, ListItem
 
 from payment.qiwi.payment import *
 from utility.messages import *
+from utility.validation import *
 
 loop = asyncio.get_event_loop()
 
@@ -67,7 +67,7 @@ async def pay_user_for_tasks(user_id, delay):
     await asyncio.sleep(delay)
     # TODO сделать логирование вместо вот этого
     print('Paying completed tasks for user: ' + str(user_id))
-    payment_sum = pay_completed_user_tasks(user_id)
+    payment_sum = await pay_all_completed_user_tasks(user_id)
 
     return payment_sum
 
@@ -77,7 +77,7 @@ async def return_clip_int_queue(user_id, clip_id, delay):
     await asyncio.sleep(delay)
     # TODO добавить логирование
     print('Wait for clip in queue for : ' + str(delay) + ', clip_id = ' + str(clip_id))
-    is_return_clip_in_queue(user_id, clip_id)
+    await is_return_clip_in_queue(user_id, clip_id)
 
     return True
 
@@ -87,15 +87,15 @@ async def start_commands_handle(m: types.Message):
     state = dp.current_state(user=m.from_user.id)
     await state.reset_state()
 
-    if is_user_in_db_tt(m.from_user.id) < 1:
+    if await is_user_in_db_tt(m.from_user.id) < 1:
         argument = m.get_args()
-        if (argument is not None) and (argument.isdigit() is True) and (is_user_in_db_tt(argument)) == 1:
-            add_user_to_db_tt(m.from_user.id, ref_father=argument)
+        if (argument is not None) and (argument.isdigit() is True) and (await is_user_in_db_tt(argument)) == 1:
+            await add_user_to_db_tt(m.from_user.id, ref_father=argument)
 
             await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
             await bot.send_message(text=NEW_REFERRAL(argument), chat_id=argument)
         else:
-            add_user_to_db_tt(m.from_user.id)
+            await add_user_to_db_tt(m.from_user.id)
             await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
     else:
         await m.reply(UPDATE, reply=False, parse_mode='HTML', reply_markup=main_menu)
@@ -126,7 +126,7 @@ async def profile_button_handle(m: types.Message):
         InlineKeyboardButton(text='Пополнить баланс', callback_data='top_up_balance'),
         InlineKeyboardButton(text='Вывести средства', callback_data='withdraw_funds'))
 
-    await m.reply(PROFILE(m), reply=False, parse_mode='HTML', reply_markup=top_up_balance)
+    await m.reply(await PROFILE(m), reply=False, parse_mode='HTML', reply_markup=top_up_balance)
 
 
 @dp.message_handler(lambda m: m.text == 'Заказать')
@@ -152,8 +152,8 @@ async def tt_video_handle(m: types.Message):
                 tt_music_id = 2
 
                 # TODO сохранять видос/линк на него в БД
-                order_id = save_tt_clip(client=m.from_user.id, clip_link=clip_link,
-                                        clip_id=tt_clip_id, music_id=tt_music_id)
+                order_id = await save_tt_clip(client=m.from_user.id, clip_link=clip_link,
+                                              clip_id=tt_clip_id, music_id=tt_music_id)
 
                 cancel_promotion = InlineKeyboardMarkup()
                 # TODO добавить эту штуку для удаления видоса в случае нажатия кнопки отмена
@@ -216,8 +216,8 @@ def check_tt_account_link(link):
         return False
 
 
-def tt_acc_not_exist(user_id):
-    link = tt_account_link(user_id)
+async def tt_acc_not_exist(user_id):
+    link = await get_tt_account_link(user_id)
 
     # проверяет есть ли в базе вообще что-то стринговое
     return not isinstance(link, str)
@@ -227,7 +227,7 @@ def tt_acc_not_exist(user_id):
 async def sent_instruction_for_get_money(m: types.Message):
     user_id = m.from_user.id
 
-    if tt_acc_not_exist(user_id):
+    if await tt_acc_not_exist(user_id):
         state = dp.current_state(user=user_id)
         await state.set_state('REG_TT_ACCOUNT')
         await m.reply(TT_ACCOUNT, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
@@ -257,7 +257,16 @@ async def sent_instruction_for_get_money(m: types.Message):
 async def get_money(user_id):
     # все видосы для продвижения
     clip_list = await clips_for_work(user_id)
-    skipped_videos = get_skipped_videos(user_id)
+
+    result_info = {}
+
+    if clip_list == 0:
+        result_info['clips_exist'] = False
+        result_info['reply_msg'] = NO_TT_VIDEO_TO_PROMO
+
+        return result_info
+
+    skipped_videos = await get_skipped_videos(user_id)
 
     clip_id_set = set(clip_list.keys())
     skipped_clip_id_set = set(skipped_videos.keys())
@@ -268,8 +277,6 @@ async def get_money(user_id):
 
     for clip_id in shown_clip_id_set:
         shown_clip_dict[clip_id] = clip_list[clip_id]
-
-    result_info = {}
 
     # проверяем, пустой ли
     if shown_clip_dict:
@@ -311,7 +318,7 @@ async def tt_account_reg(m: types.Message):
             if check_tt_account_link(tt_acc_link):
                 # TODO сохранять ссылку на акк в БД юзера
                 user_id = m.from_user.id
-                return_tt_acc = add_tt_acc_to_user(user_id, tt_acc_link)
+                return_tt_acc = await add_tt_acc_to_user(user_id, tt_acc_link)
 
                 # cancel_promotion = InlineKeyboardMarkup()
                 # TODO добавить эту штуку для отвязки акка в случае нажатия кнопки отмена
@@ -347,10 +354,10 @@ async def tt_account_reg(m: types.Message):
 @dp.message_handler(state='SEND_CLIP_COUNT')
 async def handle_send_clip_count(m: types.Message):
     if (m.content_type == 'text') and (m.text.isdigit() is True) and (
-            int(m.text) >= 1) and user_balance_tt(m.from_user.id) >= int(m.text) * CASH_MIN:
+            int(m.text) >= 1) and await get_user_balance_tt(m.from_user.id) >= int(m.text) * CASH_MIN:
 
         video_to_promo_count = int(m.text)
-        order_id = update_tt_video_goal(video_to_promo_count)
+        order_id = await update_tt_video_goal(video_to_promo_count)
 
         confirmation_menu = InlineKeyboardMarkup()
         confirmation_menu.add(
@@ -368,7 +375,7 @@ async def handle_send_clip_count(m: types.Message):
             reply=False,
             reply_markup=confirmation_menu)
     else:
-        order_id = get_video_stat(m.from_user.id)
+        order_id = await get_video_stat(m.from_user.id)
 
         # TODO убрать кнопку и удалять видос из базы или ставить статус говна
         cancel_pay_menu = InlineKeyboardMarkup()
@@ -385,9 +392,9 @@ async def top_up_balance(m: types.Message):
     bot_last_message_id = m.message_id - 1
 
     if m.content_type == 'text':
-        money_amount = m.text
+        money_amount = int(m.text)
 
-        payment_info = add_user_payment(user_id, money_amount)
+        payment_info = await add_user_payment(user_id, money_amount)
         payment_comment = payment_info[0]
         payment_id = payment_info[1]
 
@@ -420,11 +427,11 @@ async def withdraw_funds_validation(m: types.Message):
 
         try:
             funds_amount = int(funds_amount)
-            balance = tt_user_balance(user_id=user_id)
+            balance = await get_user_balance_tt(user_id=user_id)
 
             if balance >= funds_amount:
                 if funds_amount >= 200:
-                    add_withdraw_funds(user_id, funds_amount)
+                    await add_withdraw_funds(user_id, funds_amount)
 
                     # TODO придумать че делать, когда отправляется список объектов
                     # TODO вылезает ошибка когда я ищу предыдущее сообение, если функцией пользуются несколько челов
@@ -458,25 +465,31 @@ async def withdraw_funds_location(m: types.Message):
     bot_last_message_id = m.message_id - 1
 
     if m.content_type == 'text':
-        withdraw_funds_loc = m.text
+        withdraw_funds_number = m.text
 
-        last_withdraw_id = get_last_withdraw()
-        # TODO придумать проверку номера телефона или банковской карты
-        update_withdraw_location(last_withdraw_id, 'qiwi', withdraw_funds_loc)
+        withdraw_number_validation = valid_withdraw_number(withdraw_funds_number)
 
-        # TODO придумать че делать, когда отправляется список объектов
-        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+        if withdraw_number_validation[0]:
+            last_withdraw_id = await get_last_withdraw()
 
-        withdraw_success_question = InlineKeyboardMarkup()
-        withdraw_success_question.add(
-            InlineKeyboardButton(text='Вывести', callback_data='withdraw_funds_' + str(last_withdraw_id)),
-            InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+            await update_withdraw_location(last_withdraw_id, withdraw_number_validation[1],
+                                           withdraw_funds_number)
 
-        state = dp.current_state(user=m.from_user.id)
-        await state.set_state('WITHDRAW_FUNDS_WAIT_MONEY')
+            # TODO придумать че делать, когда отправляется список объектов
+            await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
 
-        await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_loc),
-                      reply=False, reply_markup=withdraw_success_question)
+            withdraw_success_question = InlineKeyboardMarkup()
+            withdraw_success_question.add(
+                InlineKeyboardButton(text='Вывести', callback_data='withdraw_funds_' + str(last_withdraw_id)),
+                InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+
+            state = dp.current_state(user=m.from_user.id)
+            await state.set_state('WITHDRAW_FUNDS_WAIT_MONEY')
+
+            await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_number),
+                          reply=False, reply_markup=withdraw_success_question)
+        else:
+            pass
     else:
         await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
         await m.reply(WRONG_WITHDRAW_FUNDS_LOCATION, reply=False, reply_markup=cancel_menu)
@@ -549,7 +562,7 @@ async def send_mail(m: types.Message):
 async def referal_button_handle(m: types.Message):
     get_bot = await bot.get_me()
     await m.reply(PARTNER_PROGRAM(get_bot.username, m.from_user.id,
-                                  get_referrals_count(m.from_user.id)),
+                                  await get_referrals_count(m.from_user.id)),
                   reply=False, parse_mode='HTML')
 
 
@@ -563,7 +576,7 @@ async def handle_user_for_chb(m: types.Message):
 
         if user_id.isdigit() and balance_increase.lstrip('-').isdigit():
 
-            increase_balance_result = increase_balance_tt(user_id, balance_increase)
+            increase_balance_result = await increase_balance_tt(user_id, balance_increase)
 
             await m.reply(increase_balance_result, reply=False)
         else:
@@ -605,9 +618,9 @@ async def cancel_button_handle(c: types.callback_query):
 @dp.callback_query_handler(lambda c: 'cancel_' in c.data,
                            state=['CONFIRMATION', 'GET_SUB_COUNT', 'SEND_CLIP_COUNT', 'GET_TT_VIDEO'])
 async def cancel_wnum_button_handler(c: types.callback_query):
-    clip_id = c.data.replace('cancel_', '')
+    clip_id = int(c.data.replace('cancel_', ''))
 
-    status = delete_tt_clip_from_promo_db(clip_id)
+    status = await delete_tt_clip_from_promo_db(clip_id)
 
     if status:
         await c.message.edit_text(CANCEL_TEXT)
@@ -638,10 +651,10 @@ async def cancel_tt_acc_button_handler(c: types.callback_query):
 
 @dp.callback_query_handler(lambda c: 'check_payment_' in c.data, state='TOP_UP_BALANCE')
 async def confirm_button_handler(c: types.callback_query):
-    payment_id = c.data.replace('check_payment_', '')
+    payment_id = int(c.data.replace('check_payment_', ''))
     user_id = c.from_user.id
 
-    payment = view_payment(payment_id)
+    payment = await view_payment(payment_id)
     payment_status = payment[0]
     payment_amount = payment[1]
 
@@ -652,26 +665,31 @@ async def confirm_button_handler(c: types.callback_query):
 
     if payment_status == 1:
         await c.message.edit_text(MONEY_EARNED)
-        deposit_money_to_balance(user_id, payment_amount)
-    else:
-        await c.message.edit_text(MONEY_NOT_EARNED)
+        await deposit_money_to_balance(user_id, payment_amount)
 
-    state = dp.current_state(user=c.from_user.id)
-    await state.reset_state()
+        state = dp.current_state(user=c.from_user.id)
+        await state.reset_state()
+    else:
+        payment_menu = InlineKeyboardMarkup()
+        payment_menu.add(
+            InlineKeyboardButton(text='Проверить оплату', callback_data='check_payment_' + str(payment_id)),
+            InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+
+        await bot.send_message(user_id, MONEY_NOT_EARNED, reply_markup=payment_menu)
 
 
 @dp.callback_query_handler(lambda c: 'confirm_' in c.data, state='CONFIRMATION')
 async def confirm_button_handler(c: types.callback_query):
-    order_id = c.data.replace('confirm_', '')
+    order_id = int(c.data.replace('confirm_', ''))
 
-    confirm_return = confirm_clip_promo(order_id)
+    confirm_return = await confirm_clip_promo(order_id)
 
     if confirm_return:
         await c.message.edit_text(CLIP_SUCCESSFULLY_ADDED)
         state = dp.current_state(user=c.from_user.id)
         await state.reset_state()
 
-        for user_id in get_all_user_id():
+        for user_id in await get_all_user_id():
             await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
     else:
         await c.message.edit_text(CLIP_IS_NOT_PROMO)
@@ -681,37 +699,40 @@ async def confirm_button_handler(c: types.callback_query):
 
 @dp.callback_query_handler(lambda c: 'check_clip_' in c.data)
 async def check_clip(c: types.CallbackQuery):
-    clip_order_id = c.data.replace('check_clip_', '')
+    clip_order_id = int(c.data.replace('check_clip_', ''))
     user_id = c.from_user.id
 
     # TODO добавить проверку музыки по полю из БД
     await check_clip_for_paying(user_id, clip_order_id)
+    user_alltime_clips = await get_alltime_clips(user_id)
 
     state = dp.current_state(user=user_id)
-    await state.reset_state()
 
     # TODO запускать отдельно в другом месте
     paying_task = asyncio.create_task(pay_user_for_tasks(user_id, 120))
     reset_state_task = asyncio.create_task(state.reset_state())
     send_msg_clip_checking_task = asyncio.create_task(c.message.edit_text(TT_CLIP_CHECKING))
 
-    # старый код с concurrent выполнением оплаты
-    # with asyncio.get_running_loop() as running_loop:
-    #     payment_future = running_loop.submit(pay_user_for_tasks, user_id, 1)
-    #     payment_sum = payment_future.result()
-    #     await bot.send_message(user_id, 'Поздравляю! Вы получили ' + str(payment_sum) + ' RUB.')
-
     # сразу запускаем эту таску, чтобы пользователю побыстрее пришли бабки
     payment_sum = await paying_task
     # если клипы засчитались в другую проверку и нет смысла оповещать о 0 бабок
     # (там их несколько подряд можно запустить)
     if payment_sum != 0:
-        user_in_abusers_status = add_user_to_clip_abusers(clip_order_id, user_id)
-        alltime_get_clips_update_status = update_user_alltime_get_clips(clip_order_id, 1)
+        user_in_abusers_status = await add_user_to_clip_abusers(clip_order_id, user_id)
+        alltime_get_clips_update_status = await update_user_alltime_get_clips(clip_order_id, 1)
 
         if user_in_abusers_status and alltime_get_clips_update_status:
+
+            if user_alltime_clips == 0:
+                ref_father_id = await pay_by_referral(user_id)
+                if ref_father_id:
+                    # отправит сообщение реф отцу об успешном выполнении задания его сыном
+                    await bot.send_message(ref_father_id, 'Ваш реферал только что выполнил первое задание! '
+                                                          'Вы получили ' + str(REF_BONUS) + ' RUB.')
             # отправит сообщение, когда получит ответ о пополнении кошелька
             await bot.send_message(user_id, 'Поздравляю! Вы получили ' + str(payment_sum) + ' RUB.')
+        else:
+            print('чув ничего не получил, хотя пытался')
 
     # запускаем такси смены состояния и отправки ответа от бота
     await reset_state_task
@@ -721,10 +742,10 @@ async def check_clip(c: types.CallbackQuery):
 # TODO сделать обновление инлайн клавы и видоса при нажатии на кнопку
 @dp.callback_query_handler(lambda c: 'skip_' in c.data)
 async def skip_video(c: types.CallbackQuery):
-    clip_id = c.data.replace('skip_', '')
+    clip_id = int(c.data.replace('skip_', ''))
     user_id = c.from_user.id
 
-    add_video_to_skipped(user_id, clip_id)
+    await add_video_to_skipped(user_id, clip_id)
 
     await c.message.edit_text(TT_VIDEO_SKIPPED)
 
@@ -738,7 +759,7 @@ async def skip_video(c: types.CallbackQuery):
         await c.message.reply(clips_info.get('reply_msg'),
                               reply=False)
 
-    # TODO таймер на 30 минут для видоса
+    # таймер на 30 минут для появления видоса в списке на продвижение
     return_clip_in_queue_success = asyncio.create_task(return_clip_int_queue(user_id, clip_id, 1800))
     if await return_clip_in_queue_success:
         # отправит сообщение о появлении нового клипа
@@ -783,11 +804,19 @@ async def get_unverified_tasks(c: types.CallbackQuery):
     await c.message.edit_text(ADMIN_WITHDRAW)
 
     # забираем инфу о последних неоплаченных выводах средст
-    first_unverified_withdraw_funds = get_first_unverified_withdraw_funds()
+    first_unverified_withdraw_funds = await get_first_unverified_withdraw_funds()
 
     if first_unverified_withdraw_funds:
-        withdraw_funds_dict = list(get_first_unverified_withdraw_funds().values())[0]
-        print(withdraw_funds_dict)
+        withdraw_funds_dict = list(first_unverified_withdraw_funds.values())[0]
+
+        user_id = withdraw_funds_dict['user_id']
+        # добавляем количество рефералов пользователя в словарь
+        user_ref_count = await get_referrals_count(user_id)
+        withdraw_funds_dict['user_ref_count'] = user_ref_count
+
+        # добавляем количество снятых пользователем видосов в словарь
+        user_alltime_clips = await get_alltime_clips(user_id)
+        withdraw_funds_dict['user_alltime_clips'] = user_alltime_clips
 
         withdraw_id_list_str = ''
         for withdraw_id in withdraw_funds_dict['withdraw_id_list']:
@@ -820,7 +849,7 @@ async def handle_uban_button(c: types.CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data == 'withdraw_funds')
 async def handle_uban_button(c: types.CallbackQuery):
     user_id = c.from_user.id
-    balance = tt_user_balance(user_id=user_id)
+    balance = await get_user_balance_tt(user_id=user_id)
 
     if balance >= 200:
         await c.message.reply(WITHDRAW_FUNDS(balance), reply=False, parse_mode='HTML', reply_markup=cancel_menu)
@@ -837,12 +866,12 @@ async def handle_uban_button(c: types.CallbackQuery):
 async def withdraw_funds(c: types.CallbackQuery):
     withdraw_id = c.data.replace('withdraw_funds_', '')
 
-    funds_amount = update_withdraw_status(withdraw_id, 2)
+    funds_amount = await update_withdraw_status(withdraw_id, 2)
 
     user_id = c.from_user.id
-    current_user_balance = user_balance_tt(user_id)
+    current_user_balance = await get_user_balance_tt(user_id)
     new_user_balance = current_user_balance - funds_amount
-    change_balance_tt(user_id, new_user_balance)
+    await change_balance_tt(user_id, new_user_balance)
 
     state = dp.current_state(user=user_id)
     await state.reset_state()
@@ -867,7 +896,7 @@ async def handle_admin_withdraw_button(c: types.CallbackQuery):
     await c.message.edit_text(ADMIN_WITHDRAW_FUNDS_SUCCESS)
 
 
-@ dp.callback_query_handler(lambda c: c.data == 'chb')
+@dp.callback_query_handler(lambda c: c.data == 'chb')
 async def handle_chb_button(c: types.CallbackQuery):
     await c.message.edit_text(SEND_USER_FOR_CHANGE_BALANCE)
     state = dp.current_state(user=c.from_user.id)
@@ -877,6 +906,7 @@ async def handle_chb_button(c: types.CallbackQuery):
 async def on_shutdown(dispatcher: Dispatcher):
     await dispatcher.storage.close()
     await dispatcher.storage.wait_closed()
+
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True, on_shutdown=on_shutdown, loop=loop)

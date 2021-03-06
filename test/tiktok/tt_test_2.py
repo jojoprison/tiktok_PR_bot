@@ -2,7 +2,7 @@ from TikTokApi import TikTokApi
 
 from config.settings import TT_VERIFY_FP
 
-s_v_web_id = 'verify_kh96hlyt_z40z1rRE_jkcF_4HXZ_AABt_wf2Q6wPRX0Cq'
+s_v_web_id = 'verify_klv5c5xg_nEikqRKz_up6a_4o0n_Bzh2_qD4CuJUGbEDh'
 
 tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP)
 

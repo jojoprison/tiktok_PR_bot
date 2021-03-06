@@ -1,12 +1,12 @@
 import datetime
-import sqlite3
-
+import asyncio
 import requests
 
-import functional.paths as paths
+from db.db_connect import DbConnect, conn
 from payment.qiwi.comment_generation import generate_comment
 
-conn = sqlite3.connect(paths.get_tt_db_path())
+# get_conn_task = asyncio.create_task(DbConnect().get_connect())
+# conn = None
 
 # мой киви токен: 543fa02d3b1823ca6a9d536ca749dba7
 # киви токен Димаса
@@ -35,68 +35,74 @@ def create_withdraw_funds_table():
     conn.commit()
 
 
-def add_user_payment(user_id, money_amount):
+async def add_user_payment(user_id, money_amount):
     payment_comment = generate_comment(user_id)
 
-    cur = conn.cursor()
     # cur.execute(f"INSERT INTO qiwi_test VALUES({user_id}, {phone}, {money_amount}, {random_code}, {0}, {None})")
-    cur.execute(
-        '''INSERT INTO qiwi_test(user_id, sum, comment, status, payment_date) 
-        VALUES(?,?,?,?,?)''', (user_id, money_amount, payment_comment, 0, datetime.datetime.now()))
-    # забираем последнюю запись об оплате из таблицы
-    payment_id = cur.execute('''SELECT MAX(payment_id) FROM qiwi_test''').fetchall()[0][0]
+    async with conn.transaction():
+        await conn.execute('INSERT INTO qiwi_test(user_id, sum, comment, status, payment_date) '
+                           'VALUES($1, $2, $3, $4, $5)',
+                           user_id, money_amount, payment_comment, 0, datetime.datetime.now())
 
-    cur.execute(
-        '''INSERT INTO user_payments(user_id, payment_id) 
-        VALUES(?,?)''', (user_id, payment_id))
-    conn.commit()
+    # забираем последнюю запись об оплате из таблицы
+    payment_id = await conn.fetchval(
+        'SELECT MAX(payment_id) FROM qiwi_test'
+    )
+
+    async with conn.transaction():
+        await conn.execute('INSERT INTO user_payments(user_id, payment_id) VALUES($1, $2)',
+                           user_id, payment_id)
 
     return payment_comment, payment_id
 
 
-def add_withdraw_funds(user_id, funds_amount):
-    cur = conn.cursor()
-    cur.execute(
-        '''INSERT INTO withdraw_funds(user_id, funds_amount, status, date) 
-        VALUES(?,?,?,?)''', (user_id, funds_amount, 0, datetime.datetime.now()))
+async def add_withdraw_funds(user_id, funds_amount):
+    async with conn.transaction():
+        await conn.execute('INSERT INTO withdraw_funds(user_id, funds_amount, status, date) '
+                           'VALUES($1, $2, $3, $4)',
+                           user_id, funds_amount, 0, datetime.datetime.now())
+
     # забираем последнюю запись об оплате из таблицы
-    conn.commit()
     # withdraw_id = cur.execute('''SELECT MAX(withdraw_id) FROM withdraw_funds''').fetchall()[0][0]
 
     # return withdraw_id
 
 
-def get_last_withdraw():
-    cur = conn.cursor()
-    withdraw_id = cur.execute('''SELECT MAX(withdraw_id) FROM withdraw_funds''').fetchall()[0][0]
+async def get_last_withdraw():
+    withdraw_id = await conn.fetchval(
+        'SELECT MAX(withdraw_id) FROM withdraw_funds'
+    )
 
     return withdraw_id
 
 
-def update_withdraw_status(withdraw_id, new_status):
-    cur = conn.cursor()
-    cur.execute('''UPDATE withdraw_funds SET status = ? WHERE withdraw_id = ?''', (new_status, withdraw_id))
-    conn.commit()
+async def update_withdraw_status(withdraw_id, new_status):
+    async with conn.transaction():
+        await conn.execute('UPDATE withdraw_funds SET status = $2 WHERE withdraw_id = $1',
+                           withdraw_id, new_status)
 
-    funds_amount = cur.execute(f'SELECT funds_amount FROM withdraw_funds WHERE withdraw_id = {withdraw_id}')
-    funds_amount = funds_amount.fetchone()[0]
+    funds_amount = await conn.fetchval(
+        'SELECT funds_amount FROM withdraw_funds WHERE withdraw_id = $1',
+        withdraw_id
+    )
 
     return funds_amount
 
 
-def update_withdraw_location(withdraw_id, location, number):
-    cur = conn.cursor()
-    cur.execute('''UPDATE withdraw_funds SET location = ?, number = ? WHERE withdraw_id = ?''',
-                (location, number, withdraw_id))
-    conn.commit()
+async def update_withdraw_location(withdraw_id, location, number):
+    async with conn.transaction():
+        await conn.execute('UPDATE withdraw_funds SET location = $2, number = $3 WHERE withdraw_id = $1',
+                           withdraw_id, location, number)
 
     return True
 
 
-def view_payment(payment_id):
-    cur = conn.cursor()
-    result = cur.execute(
-        f"SELECT * FROM qiwi_test WHERE payment_id = {payment_id}").fetchone()  # достаем данные из таблицы
+async def view_payment(payment_id):
+    # достаем данные из таблицы
+    result = await conn.fetchrow(
+        'SELECT * FROM qiwi_test WHERE payment_id = $1',
+        payment_id
+    )
 
     current_payment_status = result[4]
     # в случае если оплата прошла успеша и зафиксировалась в базе
@@ -117,9 +123,10 @@ def view_payment(payment_id):
     for i in range(len(req['data'])):
         if req['data'][i]['comment'] == comment:
             if req['data'][i]['sum']['amount'] == payment_amount:
-                cur.execute('''UPDATE qiwi_test SET status = ?, phone = ? WHERE payment_id = ?''',
-                            (payment_success_status, req['data'][i]['account'], payment_id,))
-                conn.commit()
+                async with conn.transaction():
+                    await conn.execute('UPDATE qiwi_test SET status = $2, phone = $3 WHERE payment_id = $1',
+                                       payment_id, payment_success_status, req['data'][i]['account'])
+
                 return payment_success_status, payment_amount
 
     return current_payment_status, payment_amount
