@@ -69,12 +69,12 @@ class DbConnect:
 
             # придумать где закрывать коннект к базе
             # TODO разобраться че лучше юзать пул коннектов или один коннект
-            # conn_pool = await asyncpg.create_pool(**db_params)
-            conn = await asyncpg.connect(**db_params)
+            con = await asyncpg.create_pool(**db_params)
+            # conn = await asyncpg.connect(**db_params)
 
             print('got conn remote')
 
-            return conn
+            return con
 
         except:
             print('connected failed')
@@ -90,9 +90,10 @@ class DbConnect:
         print('connect local')
 
         # придумать где закрывать коннект к базе
-        conn = await asyncpg.connect(**params)
+        con = await asyncpg.create_pool(**params)
+        # con = await asyncpg.connect(**params)
 
-        return conn
+        return con
 
     def get_sqlite_tt_connect(self):
         sqlite3.connect(paths.get_tt_db_path())

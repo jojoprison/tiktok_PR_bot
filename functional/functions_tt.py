@@ -32,8 +32,8 @@ async def save_tt_clip(**data):
         async with conn.transaction():
             await conn.execute('INSERT INTO clips(client, tt_clip_link, tt_clip_id, tt_music_id, '
                                'goal, status, abusers, date) VALUES($1, $2, $3, $4, $5, $6, $7, $8)',
-                               (client_id, clip_link, clip_id, music_id, goal, 2,
-                                str({}), datetime.datetime.now()))
+                               client_id, clip_link, clip_id, music_id, goal, 2,
+                                str({}), datetime.datetime.now())
 
         order_id = await conn.fetchval('SELECT MAX(order_id) FROM clips')
 
@@ -158,6 +158,7 @@ async def is_user_in_db_tt(used_id):
         used_id
     )
 
+    print(count_of_user_id_in_db)
     return count_of_user_id_in_db
 
 
@@ -187,7 +188,7 @@ async def add_user_to_db_tt(new_user_id, **ref_father):
             await conn.execute('INSERT INTO users(user_id, balance, alltime_clips, referrals, '
                                'skipped_videos, alltime_get_clips)'
                                'VALUES($1, $2, $3, $4, $5, $6)',
-                               (new_user_id, 0, 0, str([]), str({}), 0))
+                               new_user_id, 0, 0, str([]), str({}), 0)
 
 
 async def add_video_to_skipped(user_id, clip_id):
@@ -579,9 +580,6 @@ async def increase_balance_tt(user_id, balance_increase):
     )
 
     if count == 1:
-        user_id = int(user_id)
-        balance_increase = int(balance_increase)
-
         async with conn.transaction():
             await conn.execute('UPDATE users SET balance = balance + $2 WHERE user_id = $1',
                                user_id, balance_increase)
