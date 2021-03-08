@@ -84,18 +84,25 @@ async def return_clip_int_queue(user_id, clip_id, delay):
 
 @dp.message_handler(commands=['start'])
 async def start_commands_handle(m: types.Message):
-    state = dp.current_state(user=m.from_user.id)
+    user_id = int(m.from_user.id)
+
+    state = dp.current_state(user=user_id)
     await state.reset_state()
 
-    if await is_user_in_db_tt(m.from_user.id) < 1:
+    if await is_user_in_db_tt(user_id) < 1:
         argument = m.get_args()
-        if (argument is not None) and (argument.isdigit() is True) and (await is_user_in_db_tt(argument)) == 1:
-            await add_user_to_db_tt(m.from_user.id, ref_father=argument)
+        print(argument, type(argument))
+
+        if (argument is not None) and (argument.isdigit() is True) and (await is_user_in_db_tt(int(argument))) == 1:
+            print('in')
+            argument = int(argument)
+            await add_user_to_db_tt(user_id, ref_father=argument)
+            print('reg user')
 
             await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
-            await bot.send_message(text=NEW_REFERRAL(argument), chat_id=argument)
+            await bot.send_message(text=await NEW_REFERRAL(argument), chat_id=argument)
         else:
-            await add_user_to_db_tt(m.from_user.id)
+            await add_user_to_db_tt(user_id)
             await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
     else:
         await m.reply(UPDATE, reply=False, parse_mode='HTML', reply_markup=main_menu)
@@ -126,6 +133,7 @@ async def profile_button_handle(m: types.Message):
         InlineKeyboardButton(text='Пополнить баланс', callback_data='top_up_balance'),
         InlineKeyboardButton(text='Вывести средства', callback_data='withdraw_funds'))
 
+    # TODO добавить проверку есть ли пользователь в базе
     await m.reply(await PROFILE(m), reply=False, parse_mode='HTML', reply_markup=top_up_balance)
 
 
@@ -158,11 +166,10 @@ async def tt_video_handle(m: types.Message):
                 cancel_promotion = InlineKeyboardMarkup()
                 # TODO добавить эту штуку для удаления видоса в случае нажатия кнопки отмена
                 cancel_promotion.add(
-                    # TODO изменить clip_id в str(0)
                     InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(order_id)))
 
                 await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
-                await m.reply(SEND_CLIP_COUNT(m.from_user.id, clip_link), reply=False, parse_mode='HTML',
+                await m.reply(await SEND_CLIP_COUNT(m.from_user.id, clip_link), reply=False, parse_mode='HTML',
                               reply_markup=cancel_promotion)
 
                 state = dp.current_state(user=m.from_user.id)
@@ -575,6 +582,8 @@ async def handle_user_for_chb(m: types.Message):
         balance_increase = change_balance_request[1]
 
         if user_id.isdigit() and balance_increase.lstrip('-').isdigit():
+            user_id = int(user_id)
+            balance_increase = int(balance_increase)
 
             increase_balance_result = await increase_balance_tt(user_id, balance_increase)
 
@@ -864,7 +873,7 @@ async def handle_uban_button(c: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda c: 'withdraw_funds_' in c.data, state='WITHDRAW_FUNDS_WAIT_MONEY')
 async def withdraw_funds(c: types.CallbackQuery):
-    withdraw_id = c.data.replace('withdraw_funds_', '')
+    withdraw_id = int(c.data.replace('withdraw_funds_', ''))
 
     funds_amount = await update_withdraw_status(withdraw_id, 2)
 
@@ -886,7 +895,7 @@ async def handle_admin_withdraw_button(c: types.CallbackQuery):
 
     for withdraw_id in converted_withdraw_id_list:
         if withdraw_id != '':
-            submit_withdraw(withdraw_id)
+            await submit_withdraw(withdraw_id)
 
     user_id = c.from_user.id
 
