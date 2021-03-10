@@ -69,8 +69,8 @@ class DbConnect:
 
             # придумать где закрывать коннект к базе
             # TODO разобраться че лучше юзать пул коннектов или один коннект
-            con = await asyncpg.create_pool(**db_params)
-            # conn = await asyncpg.connect(**db_params)
+            # con = await asyncpg.create_pool(**db_params)
+            con = await asyncpg.connect(**db_params)
 
             print('got conn remote')
 
@@ -90,8 +90,8 @@ class DbConnect:
         print('connect local')
 
         # придумать где закрывать коннект к базе
-        con = await asyncpg.create_pool(**params)
-        # con = await asyncpg.connect(**params)
+        # con = await asyncpg.create_pool(**params)
+        con = await asyncpg.connect(**params)
 
         return con
 
