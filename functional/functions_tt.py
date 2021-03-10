@@ -172,17 +172,17 @@ async def add_user_to_db_tt(new_user_id, **ref_father):
                                'VALUES($1, $2 , $3, $4, $5, $6, $7)',
                                new_user_id, 0, 0, str([]), str({}), 0, ref_father)
 
-        referrals_of_ref_father = await conn.fetchval(
-            'SELECT referrals FROM users WHERE user_id = $1',
-            ref_father
-        )
-        referrals_of_ref_father = eval(referrals_of_ref_father)
-        referrals_of_ref_father.append(new_user_id)
-        referrals_of_ref_father = str(referrals_of_ref_father)
+            referrals_of_ref_father = await conn.fetchval(
+                'SELECT referrals FROM users WHERE user_id = $1',
+                ref_father
+            )
+            referrals_of_ref_father = eval(referrals_of_ref_father)
+            referrals_of_ref_father.append(new_user_id)
+            referrals_of_ref_father = str(referrals_of_ref_father)
 
-        async with conn.transaction():
             await conn.execute('UPDATE users SET referrals = $2 WHERE user_id = $1',
                                ref_father, referrals_of_ref_father)
+
     else:
         async with conn.transaction():
             await conn.execute('INSERT INTO users(user_id, balance, alltime_clips, referrals, '
