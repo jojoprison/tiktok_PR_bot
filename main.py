@@ -778,12 +778,12 @@ async def skip_video(c: types.CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data == 'stat')
 async def handle_stat_button(c: types.CallbackQuery):
     await c.message.edit_text(START_COLLECT_STAT)
-    users = get_users_for_mailing()
+    users = await get_all_user_id()
     all_users = 0
     blocked_users = 0
-    for x in users:
+    for user in users:
         try:
-            await bot.send_chat_action(chat_id=x[0], action='typing')
+            await bot.send_chat_action(chat_id=user  , action='typing')
             all_users += 1
         except BotBlocked:
             blocked_users += 1
