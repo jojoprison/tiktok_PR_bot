@@ -1,0 +1,6 @@
+2021-03-14 01:24:33,560 - $(name)s - INFO - Program started
+2021-03-14 01:24:33,561 - $(name)s - INFO - added 7 and 8 to get 15
+2021-03-14 01:24:33,561 - $(name)s - INFO - Done!
+2021-03-14 01:25:53,267 - exampleApp - INFO - Program started
+2021-03-14 01:25:53,267 - exampleApp.otherMod2.add - INFO - added 7 and 8 to get 15
+2021-03-14 01:25:53,267 - exampleApp - INFO - Done!
