@@ -702,7 +702,12 @@ async def confirm_button_handler(c: types.callback_query):
         await state.reset_state()
 
         for user_id in await get_all_user_id():
-            await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
+            try:
+                await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
+            except BotBlocked:
+                pass
+                # print('User ' + str(user_id) + ' was banned US BOT FUCK! ;(')
+
     else:
         await c.message.edit_text(CLIP_IS_NOT_PROMO)
         state = dp.current_state(user=c.from_user.id)
@@ -786,7 +791,7 @@ async def handle_stat_button(c: types.CallbackQuery):
     blocked_users = 0
     for user in users:
         try:
-            await bot.send_chat_action(chat_id=user  , action='typing')
+            await bot.send_chat_action(chat_id=user, action='typing')
             all_users += 1
         except BotBlocked:
             blocked_users += 1
