@@ -657,3 +657,40 @@ async def pay_by_referral(user_id):
         return ref_father
 
     return None
+
+
+async def get_table_data(table_name):
+
+    table_data = await conn.fetch(
+        f'SELECT * FROM {table_name}'
+    )
+
+    if table_data:
+        table_columns = [column_name for column_name in table_data[0].keys()]
+
+        return table_data, table_columns
+    else:
+        return None
+
+
+async def get_data_all_tables():
+    table_name_list = await conn.fetch(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+    )
+
+    # table_name_list = [c for c = table_name[1] in table_data[0].keys()]
+    for index, table_name_record in enumerate(table_name_list):
+        table_name_list[index] = table_name_record[0]
+
+    data = []
+
+    for table_name in table_name_list:
+        table_data = await get_table_data(table_name)
+
+        if table_data:
+            table_dict = dict()
+            table_dict[table_name] = table_data
+
+            data.append(table_dict)
+
+    return data
