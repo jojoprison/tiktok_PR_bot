@@ -1,3 +1,4 @@
+import pathlib
 import random
 import time
 
@@ -11,6 +12,7 @@ from aiogram.utils import executor
 from aiogram.utils.exceptions import BotBlocked
 from aiogram.utils.helper import Helper, ListItem
 
+from db.write_to_excel import save_data_into_excel
 from payment.qiwi.payment import *
 from utility.messages import *
 from utility.validation import *
@@ -45,10 +47,11 @@ mail_bt = InlineKeyboardButton(text='✉️ Рассылка', callback_data='ma
 give_uban_bt = InlineKeyboardButton(text='🚷 Выдать бан/разбан', callback_data='uban')
 change_balance_bt = InlineKeyboardButton(text='💳 Изменить баланс', callback_data='chb')
 unverified_tasks = InlineKeyboardButton(text='Вывести деньги пользователю', callback_data='admin_withdraw')
+get_user_list = InlineKeyboardButton(text='Выгрузить данные базы', callback_data='admin_get_db_data')
 
 admin_menu.add(statistics_bt, mail_bt)
 admin_menu.add(give_uban_bt, change_balance_bt)
-admin_menu.add(unverified_tasks)
+admin_menu.add(unverified_tasks, get_user_list)
 
 cancel_menu = InlineKeyboardMarkup()
 cancel_bt = InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel')
@@ -910,6 +913,22 @@ async def handle_chb_button(c: types.CallbackQuery):
     await c.message.edit_text(SEND_USER_FOR_CHANGE_BALANCE)
     state = dp.current_state(user=c.from_user.id)
     await state.set_state('GET_USER_FOR_CHB')
+
+
+# админская функция выгруза всех данных из базы
+@dp.callback_query_handler(lambda c: c.data == 'admin_get_db_data')
+async def get_unverified_tasks(c: types.CallbackQuery):
+    await c.message.edit_text(ADMIN_GET_DB_DATA)
+
+    excel_file_name = 'db/db_data.xlsx'
+
+    await save_data_into_excel(excel_file_name)
+
+    excel_file = open(excel_file_name, 'rb')
+    await bot.send_document(chat_id=c.from_user.id, document=excel_file)
+
+    state = dp.current_state(user=c.from_user.id)
+    await state.reset_state()
 
 
 async def on_shutdown(dispatcher: Dispatcher):
