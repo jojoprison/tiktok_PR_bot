@@ -1,4 +1,5 @@
-import pathlib
+import logging
+import logging.config
 import random
 import time
 
@@ -16,6 +17,7 @@ from db.write_to_excel import save_data_into_excel
 from payment.qiwi.payment import *
 from utility.messages import *
 from utility.validation import *
+from config.settings import LOG_CONFIG_DICT
 
 loop = asyncio.get_event_loop()
 
@@ -68,8 +70,10 @@ def update_tt_usernames(time_interval):
 
 async def pay_user_for_tasks(user_id, delay):
     await asyncio.sleep(delay)
-    # TODO сделать логирование вместо вот этого
-    print('Paying completed tasks for user: ' + str(user_id))
+
+    logger = logging.getLogger('bot.main.pay_user_for_tasks')
+    logger.info('Paying completed tasks for user: ' + str(user_id))
+
     payment_sum = await pay_all_completed_user_tasks(user_id)
 
     return payment_sum
@@ -78,66 +82,89 @@ async def pay_user_for_tasks(user_id, delay):
 # TODO Доделать таймер
 async def return_clip_int_queue(user_id, clip_id, delay):
     await asyncio.sleep(delay)
-    # TODO добавить логирование
-    print('Wait for clip in queue for : ' + str(delay) + ', clip_id = ' + str(clip_id))
+
+    logging.config.dictConfig(LOG_CONFIG_DICT)
+    logger = logging.getLogger('bot.main.return_clip_int_queue')
+    logger.info('Wait for clip in queue for : ' + str(delay) + ', clip_id = ' + str(clip_id))
+
     await is_return_clip_in_queue(user_id, clip_id)
 
     return True
 
 
 @dp.message_handler(commands=['start'])
-async def start_commands_handle(m: types.Message):
+async def command_start(m: types.Message):
     user_id = int(m.from_user.id)
+    username = m.from_user.username
 
     state = dp.current_state(user=user_id)
     await state.reset_state()
 
     if await is_user_in_db_tt(user_id) < 1:
         argument = m.get_args()
-        print(argument, type(argument))
+
+        logging.config.dictConfig(LOG_CONFIG_DICT)
+        logger = logging.getLogger('bot.main.start')
 
         if (argument is not None) and (argument.isdigit() is True) and (await is_user_in_db_tt(int(argument))) == 1:
-            print('in')
+            logger.info(f'try to reg user {user_id} by referral {argument}')
+
             argument = int(argument)
-            await add_user_to_db_tt(user_id, ref_father=argument)
-            print('reg user')
+            await add_user_to_db_tt(user_id, username, ref_father=argument)
+
+            logger.info(f'user {user_id} registered with by referral {argument}')
 
             await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
             await bot.send_message(text=await NEW_REFERRAL(argument), chat_id=argument)
         else:
-            await add_user_to_db_tt(user_id)
+            await add_user_to_db_tt(user_id, username)
+
+            logger.info(f'user {argument} default registered')
+
             await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
     else:
         await m.reply(UPDATE, reply=False, parse_mode='HTML', reply_markup=main_menu)
 
 
 @dp.message_handler(commands=['help'])
-async def start_commands_handle(m: types.Message):
-    state = dp.current_state(user=m.from_user.id)
+async def command_help(m: types.Message):
+
+    user_id = m.from_user.id
+
+    logging.config.dictConfig(LOG_CONFIG_DICT)
+    logger = logging.getLogger('bot.main.help')
+    logger.info(f'user {user_id} learn rules')
+
+    state = dp.current_state(user=user_id)
     await state.reset_state()
 
     await m.reply(HELP, reply=False, parse_mode='HTML', reply_markup=main_menu)
 
 
 @dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, commands=['admin'])
-async def admin_command_handle(m: types.Message):
+async def command_admin(m: types.Message):
     await m.reply(SELECT_ADMIN_MENU_BUTTON, reply=False, reply_markup=admin_menu)
 
 
 @dp.message_handler(lambda m: m.from_user.id not in BOT_ADMINS, commands=['admin'])
-async def handle_not_admin(m: types.Message):
+async def command_not_admin(m: types.Message):
+
+    logging.config.dictConfig(LOG_CONFIG_DICT)
+    logger = logging.getLogger('bot.main.command_not_admin')
+    logger.warning(f'user {m.from_user.id} try to get admin panel')
+
     await m.reply(YOU_WAS_HACK_ME, reply=False)
 
 
 @dp.message_handler(lambda m: m.text == '👤 Профиль')
 async def profile_button_handle(m: types.Message):
-    top_up_balance = InlineKeyboardMarkup()
-    top_up_balance.add(
+    balance_manipulations = InlineKeyboardMarkup()
+    balance_manipulations.add(
         InlineKeyboardButton(text='Пополнить баланс', callback_data='top_up_balance'),
         InlineKeyboardButton(text='Вывести средства', callback_data='withdraw_funds'))
 
     # TODO добавить проверку есть ли пользователь в базе
-    await m.reply(await PROFILE(m), reply=False, parse_mode='HTML', reply_markup=top_up_balance)
+    await m.reply(await PROFILE(m), reply=False, parse_mode='HTML', reply_markup=balance_manipulations)
 
 
 @dp.message_handler(lambda m: m.text == 'Заказать')

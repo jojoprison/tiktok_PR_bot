@@ -162,15 +162,15 @@ async def is_user_in_db_tt(used_id):
     return count_of_user_id_in_db
 
 
-async def add_user_to_db_tt(new_user_id, **ref_father):
+async def add_user_to_db_tt(new_user_id, username, **ref_father):
     if ref_father:
         ref_father = ref_father['ref_father']
 
         async with conn.transaction():
             await conn.execute('INSERT INTO users(user_id, balance, alltime_clips, referrals, '
-                               'skipped_videos, alltime_get_clips, ref_father)'
-                               'VALUES($1, $2 , $3, $4, $5, $6, $7)',
-                               new_user_id, 0, 0, str([]), str({}), 0, ref_father)
+                               'skipped_videos, alltime_get_clips, ref_father, username)'
+                               'VALUES($1, $2 , $3, $4, $5, $6, $7, $8)',
+                               new_user_id, 0, 0, str([]), str({}), 0, ref_father, username)
 
             referrals_of_ref_father = await conn.fetchval(
                 'SELECT referrals FROM users WHERE user_id = $1',
@@ -186,9 +186,9 @@ async def add_user_to_db_tt(new_user_id, **ref_father):
     else:
         async with conn.transaction():
             await conn.execute('INSERT INTO users(user_id, balance, alltime_clips, referrals, '
-                               'skipped_videos, alltime_get_clips)'
-                               'VALUES($1, $2, $3, $4, $5, $6)',
-                               new_user_id, 0, 0, str([]), str({}), 0)
+                               'skipped_videos, alltime_get_clips, username)'
+                               'VALUES($1, $2, $3, $4, $5, $6, $7)',
+                               new_user_id, 0, 0, str([]), str({}), 0, username)
 
 
 async def add_video_to_skipped(user_id, clip_id):
@@ -442,12 +442,12 @@ async def deposit_money_to_balance(user_id, payment_amount):
 
 
 async def get_referrals_count(user_id):
-    ref_count = await conn.fetchval(
-        'SELECT COUNT(referrals) FROM users WHERE user_id = $1',
+    ref_list = await conn.fetchval(
+        'SELECT referrals FROM users WHERE user_id = $1',
         user_id,
     )
 
-    return ref_count
+    return len(eval(ref_list))
 
 
 # TODO придумать куда воткнуть либо удалить

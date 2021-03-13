@@ -1,12 +1,9 @@
 import datetime
-import asyncio
+
 import requests
 
-from db.db_connect import DbConnect, conn
+from db.db_connect import conn
 from payment.qiwi.comment_generation import generate_comment
-
-# get_conn_task = asyncio.create_task(DbConnect().get_connect())
-# conn = None
 
 # мой киви токен: 543fa02d3b1823ca6a9d536ca749dba7
 # киви токен Димаса
@@ -38,7 +35,6 @@ def create_withdraw_funds_table():
 async def add_user_payment(user_id, money_amount):
     payment_comment = generate_comment(user_id)
 
-    # cur.execute(f"INSERT INTO qiwi_test VALUES({user_id}, {phone}, {money_amount}, {random_code}, {0}, {None})")
     async with conn.transaction():
         await conn.execute('INSERT INTO qiwi_test(user_id, sum, comment, status, payment_date) '
                            'VALUES($1, $2, $3, $4, $5)',
