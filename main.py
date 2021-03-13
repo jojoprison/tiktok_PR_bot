@@ -903,7 +903,7 @@ async def handle_admin_withdraw_button(c: types.CallbackQuery):
 
     for withdraw_id in converted_withdraw_id_list:
         if withdraw_id != '':
-            await submit_withdraw(withdraw_id)
+            await submit_withdraw(int(withdraw_id))
 
     user_id = c.from_user.id
 
