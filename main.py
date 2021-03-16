@@ -11,6 +11,7 @@ from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, \
     InlineKeyboardButton
 from aiogram.utils import executor
 from aiogram.utils.exceptions import BotBlocked
+from aiogram.utils.exceptions import UserDeactivated
 from aiogram.utils.helper import Helper, ListItem
 
 from db.write_to_excel import save_data_into_excel
@@ -814,17 +815,18 @@ async def skip_video(c: types.CallbackQuery):
 async def handle_stat_button(c: types.CallbackQuery):
     await c.message.edit_text(START_COLLECT_STAT)
     users = await get_all_user_id()
-    all_users = 0
+    alive_users = 0
     blocked_users = 0
+    # TODO сделать бегунок о выполненной работе
     for user in users:
         try:
             await bot.send_chat_action(chat_id=user, action='typing')
-            all_users += 1
-        except BotBlocked:
+            alive_users += 1
+        except (BotBlocked, UserDeactivated):
             blocked_users += 1
 
         await asyncio.sleep(0.1)
-    await bot.send_message(c.from_user.id, STATISTICS(all_users, blocked_users))
+    await bot.send_message(c.from_user.id, STATISTICS(alive_users, blocked_users))
 
 
 @dp.callback_query_handler(lambda c: c.data == 'mail')
