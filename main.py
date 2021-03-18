@@ -129,7 +129,6 @@ async def command_start(m: types.Message):
 
 @dp.message_handler(commands=['help'])
 async def command_help(m: types.Message):
-
     user_id = m.from_user.id
 
     logging.config.dictConfig(LOG_CONFIG_DICT)
@@ -149,7 +148,6 @@ async def command_admin(m: types.Message):
 
 @dp.message_handler(lambda m: m.from_user.id not in BOT_ADMINS, commands=['admin'])
 async def command_not_admin(m: types.Message):
-
     logging.config.dictConfig(LOG_CONFIG_DICT)
     logger = logging.getLogger('bot.main.command_not_admin')
     logger.warning(f'user {m.from_user.id} try to get admin panel')
@@ -445,13 +443,26 @@ async def top_up_balance(m: types.Message):
             InlineKeyboardButton(text='Проверить оплату', callback_data='check_payment_' + str(payment_id)),
             InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
 
-        await m.reply(
+        state = dp.current_state(user=m.from_user.id)
+        await state.set_state('CONFIRM_TOP_UP_BALANCE')
+
+        # TODO запищивать в стейт машину, чтоб в ответе на неправильное сообщение реплаить на него
+        top_up_balance_message_id = await m.reply(
             MONEYS(money_amount, payment_comment),
             reply=False, reply_markup=payment_menu, parse_mode='HTML')
     else:
         await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
 
         await m.reply(WRONG_MONEY_AMOUNT, reply=False, reply_markup=cancel_menu)
+
+
+# подтверждение пополнения баланса
+@dp.message_handler(content_types=types.ContentType.ANY, state='CONFIRM_TOP_UP_BALANCE')
+async def confirm_top_up_balance(m: types.Message):
+    await bot.send_message(chat_id=m.from_user.id,
+                           text='Нажмите одну из кнопок операций с пополнением баланса выше',
+                           reply_to_message_id=m.message_id - 1)
+    # await m.reply()
 
 
 # проверка данных для вывода средств
@@ -689,7 +700,7 @@ async def cancel_tt_acc_button_handler(c: types.callback_query):
         await state.reset_state()
 
 
-@dp.callback_query_handler(lambda c: 'check_payment_' in c.data, state='TOP_UP_BALANCE')
+@dp.callback_query_handler(lambda c: 'check_payment_' in c.data, state='CONFIRM_TOP_UP_BALANCE')
 async def confirm_button_handler(c: types.callback_query):
     payment_id = int(c.data.replace('check_payment_', ''))
     user_id = c.from_user.id
@@ -715,7 +726,9 @@ async def confirm_button_handler(c: types.callback_query):
             InlineKeyboardButton(text='Проверить оплату', callback_data='check_payment_' + str(payment_id)),
             InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
 
-        await bot.send_message(user_id, MONEY_NOT_EARNED, reply_markup=payment_menu)
+        # TODO запищивать в стейт машину
+        top_up_balance_message_id = await bot.send_message(
+            user_id, MONEY_NOT_EARNED, reply_markup=payment_menu)
 
 
 @dp.callback_query_handler(lambda c: 'confirm_' in c.data, state='CONFIRMATION')
@@ -972,3 +985,4 @@ async def on_shutdown(dispatcher: Dispatcher):
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True, on_shutdown=on_shutdown, loop=loop)
+    print(qiwi_req())

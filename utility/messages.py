@@ -206,9 +206,9 @@ START_COLLECT_STAT = '⏱ Начинаю сбор статистики...'
 
 TT_VIDEO_SKIPPED = 'Видео пропущено'
 
-MONEY_EARNED = 'Баланс успешно пополнен!'
+MONEY_EARNED = 'Баланс успешно пополнен! Проверьте в профиле'
 
-MONEY_NOT_EARNED = 'Баланс не пополнен.'
+MONEY_NOT_EARNED = 'Баланс не пополнен, деньги не пришли на указанный QIWI кошелек'
 
 
 def MONEYS(payment_money_amount, payment_comment):
