@@ -36,13 +36,13 @@ async def add_user_payment(user_id, money_amount):
     payment_comment = generate_comment(user_id)
 
     async with conn.transaction():
-        await conn.execute('INSERT INTO qiwi_test(user_id, sum, comment, status, payment_date) '
+        await conn.execute('INSERT INTO payment(user_id, sum, comment, status, payment_date) '
                            'VALUES($1, $2, $3, $4, $5)',
                            user_id, money_amount, payment_comment, 0, datetime.datetime.now())
 
     # забираем последнюю запись об оплате из таблицы
     payment_id = await conn.fetchval(
-        'SELECT MAX(payment_id) FROM qiwi_test'
+        'SELECT MAX(payment_id) FROM payment'
     )
 
     async with conn.transaction():
@@ -96,7 +96,7 @@ async def update_withdraw_location(withdraw_id, location, number):
 async def view_payment(payment_id):
     # достаем данные из таблицы
     result = await conn.fetchrow(
-        'SELECT * FROM qiwi_test WHERE payment_id = $1',
+        'SELECT * FROM payment WHERE payment_id = $1',
         payment_id
     )
 
@@ -120,7 +120,7 @@ async def view_payment(payment_id):
         if req['data'][i]['comment'] == comment:
             if req['data'][i]['sum']['amount'] == payment_amount:
                 async with conn.transaction():
-                    await conn.execute('UPDATE qiwi_test SET status = $2, phone = $3 WHERE payment_id = $1',
+                    await conn.execute('UPDATE payment SET status = $2, phone = $3 WHERE payment_id = $1',
                                        payment_id, payment_success_status, req['data'][i]['account'])
 
                 return payment_success_status, payment_amount

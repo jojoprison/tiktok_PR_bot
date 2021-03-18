@@ -24,7 +24,7 @@ def add_user(user_id):
     random_code = randint(100000, 999999)
 
     cur = conn.cursor()
-    cur.execute(f"INSERT INTO qiwi_test VALUES({user_id}, {phone}, {sum_}, {random_code})")
+    cur.execute(f"INSERT INTO payment VALUES({user_id}, {phone}, {sum_}, {random_code})" )
     conn.commit()
 
 
