@@ -1,5 +1,6 @@
-# dev BOT_TOKEN = '1571069556:AAEfBY3xH_1zwKCSJmt0UBfO2hyJ7OR_PeI'
-BOT_TOKEN = '1666304092:AAGjaMzajP4Wmq_LHuWLNgwIfXrLX6YttAM'
+# dev
+BOT_TOKEN = '1571069556:AAEfBY3xH_1zwKCSJmt0UBfO2hyJ7OR_PeI'
+# BOT_TOKEN = '1666304092:AAGjaMzajP4Wmq_LHuWLNgwIfXrLX6YttAM'
 
 # админы бота через запятую
 BOT_ADMINS = [92957440, 450914065, 855235999]
@@ -22,7 +23,7 @@ LOG_CONFIG_DICT = {
             'default_handler': {
                 'class': 'logging.FileHandler',
                 'formatter': 'default_formatter',
-                'filename': 'first_log_file.log'
+                'filename': 'main.log'
             }
         },
         'loggers': {
