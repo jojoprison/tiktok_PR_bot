@@ -2,6 +2,7 @@ import logging
 import logging.config
 import random
 import time
+import datetime
 
 from aiogram import Bot, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -25,7 +26,20 @@ loop = asyncio.get_event_loop()
 
 def choose_bot_token():
     # меняем токен бота в зависимости от нужды, вводим через консоль число
-    token_chooser = input('enter number of bot_token (0 - dev, 1 - pub)')
+    console_input_data = input('enter number of bot_token (0 - dev, 1 - pub)')
+
+    # флаг цикла корректности введенного числа
+    token_invalid = True
+    token_chooser = None
+
+    while token_invalid:
+        try:
+            token_chooser = int(console_input_data)
+            token_invalid = False
+        except Exception as e:
+            print(e)
+            print('invalid token number, enter valid number')
+
     if token_chooser == 0:
         bot_token = BOT_TOKEN_DEV
         print('DEV token took')
@@ -76,14 +90,18 @@ cancel_menu = InlineKeyboardMarkup()
 cancel_bt = InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel')
 cancel_menu.add(cancel_bt)
 
-
-
-
 logger_name_main = 'bot.main'
 
 
 def get_logger_name_main():
     logging.config.dictConfig(LOG_CONFIG_DICT)
+
+    moscow_tz = pytz.timezone('Europe/Moscow')
+    now = datetime.datetime.now().astimezone(moscow_tz)
+    # now.timetuple()
+
+    logging.Formatter.converter = time.gmtime
+
     return logger_name_main
 
 
