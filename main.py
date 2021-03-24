@@ -75,7 +75,7 @@ main_menu.add('Канал с выплатами')
 admin_menu = InlineKeyboardMarkup()
 
 statistics_bt = InlineKeyboardButton(text='📊 Статистика', callback_data='stat')
-mail_bt = InlineKeyboardButton(text='✉️ Рассылка', callback_data='mail')
+mail_bt = InlineKeyboardButton(text='✉️Рассылка', callback_data='mail')
 give_uban_bt = InlineKeyboardButton(text='🚷 Выдать бан/разбан', callback_data='uban')
 change_balance_bt = InlineKeyboardButton(text='💳 Изменить баланс', callback_data='chb')
 unverified_tasks = InlineKeyboardButton(text='Вывести деньги пользователю', callback_data='admin_withdraw')
@@ -689,20 +689,26 @@ async def withdraw_funds_location(m: types.Message):
 
 # админская способность рассылки
 @dp.message_handler(content_types=['text', 'video', 'photo', 'document', 'animation'], state='GET_MSG_FOR_MAIL')
-async def send_mail(m: types.Message):
+async def mailing(m: types.Message):
     state = dp.current_state(user=m.from_user.id)
     await state.reset_state()
-    users = get_users_for_mailing()
+
+    users = await get_all_user_id()
+
     if m.content_type == 'text':
         all_users = 0
         blocked_users = 0
-        for x in users:
+
+        for user_id in users:
             try:
-                await bot.send_message(x[0], m.html_text, parse_mode='HTML')
+                await bot.send_message(user_id, m.html_text, parse_mode='HTML')
                 all_users += 1
                 await asyncio.sleep(0.3)
             except BotBlocked:
                 blocked_users += 1
+            except Exception as e:
+                print(e)
+
         await m.reply(MAILING_END(all_users, blocked_users), reply=False)
     if m.content_type == 'photo':
         all_users = 0
@@ -925,7 +931,7 @@ async def confirm_clip_promo(c: types.callback_query):
 
     logger.info(f'user {user_id} try to confirm order {order_id}')
 
-    confirm_return = await confirm_clip_promo(order_id)
+    confirm_return = await confirm_clip_update_status(order_id)
 
     if confirm_return:
         logger.info(f'user {user_id} confirm order {order_id} success')
@@ -1072,7 +1078,7 @@ async def admin_mail_button(c: types.CallbackQuery):
     user_id = c.from_user.id
 
     logger = logging.getLogger(f'{get_logger_name_main()}.{admin_mail_button.__name__}')
-    logger.info(f'admin {user_id} get stat')
+    logger.info(f'admin {user_id} wanna mailing')
 
     await c.message.edit_text(SEND_MESSAGE_FOR_SEND, parse_mode='Markdown', reply_markup=cancel_menu)
     state = dp.current_state(user=c.from_user.id)

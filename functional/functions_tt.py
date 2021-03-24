@@ -215,7 +215,7 @@ async def get_video_stat(client_id):
     return last_order_id
 
 
-async def confirm_clip_promo(order_id):
+async def confirm_clip_update_status(order_id):
     try:
         prom_info = await conn.fetchrow(
             'SELECT client, goal FROM clips WHERE order_id = $1',
