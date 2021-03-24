@@ -22,7 +22,21 @@ from config.settings import LOG_CONFIG_DICT
 
 loop = asyncio.get_event_loop()
 
-bot = Bot(token=BOT_TOKEN, loop=loop)
+
+def choose_bot_token():
+    # меняем токен бота в зависимости от нужды, вводим через консоль число
+    token_chooser = input('enter number of bot_token (0 - dev, 1 - pub)')
+    if token_chooser == 0:
+        bot_token = BOT_TOKEN_DEV
+        print('DEV token took')
+    else:
+        bot_token = BOT_TOKEN_PUB
+        print('PUB token took')
+
+    return bot_token
+
+
+bot = Bot(token=choose_bot_token(), loop=loop)
 
 dp = Dispatcher(bot, storage=MemoryStorage())
 
@@ -61,6 +75,9 @@ admin_menu.add(get_logs)
 cancel_menu = InlineKeyboardMarkup()
 cancel_bt = InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel')
 cancel_menu.add(cancel_bt)
+
+
+
 
 logger_name_main = 'bot.main'
 
