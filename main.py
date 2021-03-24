@@ -70,6 +70,7 @@ class UserStates(Helper):
 main_menu = ReplyKeyboardMarkup(resize_keyboard=True)
 main_menu.add('Заработать', 'Заказать')
 main_menu.add('👤 Профиль', 'Партнёрская программа')
+main_menu.add('Канал с выплатами')
 
 admin_menu = InlineKeyboardMarkup()
 
@@ -195,8 +196,11 @@ async def command_not_admin(m: types.Message):
     await m.reply(YOU_WAS_HACK_ME, reply=False)
 
 
-@dp.message_handler(lambda m: m.text == '👤 Профиль')
+@dp.message_handler(lambda m: m.text == '👤 Профиль', state='*')
 async def profile_button_handle(m: types.Message):
+    state = dp.current_state(user=m.from_user.id)
+    await state.reset_state()
+
     balance_manipulations = InlineKeyboardMarkup()
     balance_manipulations.add(
         InlineKeyboardButton(text='Пополнить баланс', callback_data='top_up_balance'),
@@ -307,9 +311,12 @@ async def tt_acc_not_exist(user_id):
     return not isinstance(link, str)
 
 
-@dp.message_handler(lambda m: m.text == 'Заработать')
+@dp.message_handler(lambda m: m.text == 'Заработать', state='*')
 async def get_money(m: types.Message):
     user_id = m.from_user.id
+
+    state = dp.current_state(user=user_id)
+    await state.reset_state()
 
     logger = logging.getLogger(f'{get_logger_name_main()}.{get_money.__name__}')
 
@@ -743,12 +750,33 @@ async def send_mail(m: types.Message):
         await m.reply(MAILING_END(all_users, blocked_users), reply=False)
 
 
-@dp.message_handler(lambda m: m.text == 'Партнёрская программа')
+@dp.message_handler(lambda m: m.text == 'Партнёрская программа', state='*')
 async def referral_button(m: types.Message):
+    state = dp.current_state(user=m.from_user.id)
+    await state.reset_state()
+
+    user_id = m.from_user.id
+
     get_bot = await bot.get_me()
-    await m.reply(PARTNER_PROGRAM(get_bot.username, m.from_user.id,
-                                  await get_referrals_count(m.from_user.id)),
+    await m.reply(PARTNER_PROGRAM(get_bot.username, user_id,
+                                  await get_referrals_count(user_id)),
                   reply=False, parse_mode='HTML')
+
+
+# канал где дайм делает делишки))
+@dp.message_handler(lambda m: m.text == 'Канал с выплатами')
+async def referral_button(m: types.Message):
+    # withdraw_success_question = InlineKeyboardMarkup()
+    # withdraw_success_question.add(
+    #     InlineKeyboardButton(text='Вывести', callback_data='withdraw_funds_' + str(last_withdraw_id)),
+    #     InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+    #
+    # state = dp.current_state(user=m.from_user.id)
+    # await state.set_state('WITHDRAW_FUNDS_WAIT_MONEY')
+    # channel_menu = InlineKeyboardMarkup()
+    # channel_menu.add(InlineKeyboardButton(text='',
+    #                                  url=tt_video_link))
+    await m.reply(CHANNEL_FOR_MONEY, reply=False, parse_mode='HTML')
 
 
 @dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, content_types=['text'], state='GET_USER_FOR_CHB')
