@@ -267,12 +267,12 @@ async def get_alltime_clips(user_id):
 
 
 async def alltime_get_clips(user_id):
-    alltime_get_clips = await conn.fetchval(
+    all_time_get_clips = await conn.fetchval(
         'SELECT alltime_get_clips FROM users WHERE user_id = $1',
         user_id,
     )
 
-    return alltime_get_clips
+    return all_time_get_clips
 
 
 def get_tt_acc_name(url):
