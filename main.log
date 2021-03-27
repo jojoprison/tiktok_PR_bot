@@ -1,1 +1,38 @@
 2021-03-24 07:13:27,865 - bot.main.admin_get_logs - INFO - admin 92957440 get logs
+2021-03-27 07:49:22 :z - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-27 07:49:22 :z - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-27 07:49:22 :z - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-27 07:49:23 :z - bot.main.check_clip - INFO - check_clip user"s 92957440 for paying 31
+2021-03-27 07:49:37 :z - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-27 07:49:37 :z - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-27 07:49:37 :z - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-27 07:49:39 :z - bot.main.check_clip - INFO - check_clip user"s 92957440 for paying 114
+2021-03-27 07:50:59 :z - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-27 07:50:59 :z - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-27 07:50:59 :z - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-27 07:51:22 :z - bot.main.check_clip - INFO - check_clip user"s 92957440 for paying 31
+2021-03-27 07:56:39 :z - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-27 07:56:39 :z - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-27 07:56:39 :z - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-27 07:56:42 :z - bot.main.check_clip - INFO - check_clip user"s 92957440 for paying 120
+2021-03-27 07:57:24 :z - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-27 07:57:25 :z - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-27 07:57:25 :z - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-27 07:57:25 :z - bot.main.check_clip - INFO - check_clip user"s 92957440 for paying 43
+2021-03-27 07:57:26 :z - bot.main.check_clip - INFO - user"s clip_order 43 success paying added 43
+2021-03-27 07:57:26 :z - bot.main.check_clip - INFO - user 92957440 paying tasks async
+2021-03-27 07:58:39 :z - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-27 07:58:39 :z - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-27 07:58:39 :z - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-27 07:58:43 :z - bot.main.check_clip - INFO - check_clip user"s 92957440 for paying 43
+2021-03-27 07:58:52 :z - bot.main.check_clip - INFO - user"s clip_order 43 success paying added 43
+2021-03-27 07:58:55 :z - bot.main.check_clip - INFO - user 92957440 paying tasks async
+2021-03-27 08:00:28 :z - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-27 08:00:28 :z - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-27 08:00:28 :z - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-27 08:00:35 :z - bot.main.check_clip - INFO - check_clip user"s 92957440 for paying 42
+2021-03-27 08:00:37 :z - bot.main.check_clip - INFO - user"s clip_order 42 success paying added 42
+2021-03-27 08:00:41 :z - bot.main.check_clip - INFO - user 92957440 paying tasks async
+2021-03-27 08:00:47 :z - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 92957440
+2021-03-27 08:00:52 :z - bot.main.check_clip - INFO - user 92957440 update tables for paying
+2021-03-27 08:00:53 :z - bot.main.check_clip - INFO - user 92957440 gey paying
