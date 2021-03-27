@@ -973,7 +973,7 @@ async def check_clip(c: types.CallbackQuery):
     logger.info(f'user"s clip_order {clip_order_id} success paying added {clip_order_id}')
 
     # TODO запускать отдельно в другом месте
-    paying_task = asyncio.create_task(pay_user_for_tasks(user_id, 2))
+    paying_task = asyncio.create_task(pay_user_for_tasks(user_id, 150))
     reset_state_task = asyncio.create_task(state.reset_state())
     send_msg_clip_checking_task = asyncio.create_task(c.message.edit_text(TT_CLIP_CHECKING))
 
