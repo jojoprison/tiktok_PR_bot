@@ -117,7 +117,7 @@ def update_tt_usernames(time_interval):
 async def pay_user_for_tasks(user_id, delay):
     await asyncio.sleep(delay)
 
-    logger = logging.getLogger(f'{get_logger_name_main()}.{pay_user_for_tasks().__name__}')
+    logger = logging.getLogger(f'{get_logger_name_main()}.{pay_user_for_tasks.__name__}')
     logger.info('Paying completed tasks for user: ' + str(user_id))
 
     payment_sum = await pay_all_completed_user_tasks(user_id)
@@ -129,7 +129,7 @@ async def pay_user_for_tasks(user_id, delay):
 async def return_clip_int_queue(user_id, clip_id, delay):
     await asyncio.sleep(delay)
 
-    logger = logging.getLogger(f'{get_logger_name_main()}.{return_clip_int_queue().__name__}')
+    logger = logging.getLogger(f'{get_logger_name_main()}.{return_clip_int_queue.__name__}')
     logger.info('Wait for clip in queue for : ' + str(delay) + ', clip_id = ' + str(clip_id))
 
     await is_return_clip_in_queue(user_id, clip_id)
@@ -973,7 +973,7 @@ async def check_clip(c: types.CallbackQuery):
     logger.info(f'user"s clip_order {clip_order_id} success paying added {clip_order_id}')
 
     # TODO запускать отдельно в другом месте
-    paying_task = asyncio.create_task(pay_user_for_tasks(user_id, 120))
+    paying_task = asyncio.create_task(pay_user_for_tasks(user_id, 2))
     reset_state_task = asyncio.create_task(state.reset_state())
     send_msg_clip_checking_task = asyncio.create_task(c.message.edit_text(TT_CLIP_CHECKING))
 
