@@ -1,19 +1,12 @@
-import asyncio
 import datetime
 import urllib.parse as url_parser
 
-import pytz
 import requests
 from TikTokApi import TikTokApi
 from bs4 import BeautifulSoup
 
 from config.settings import *
 from db.db_connect import conn
-
-
-# conn = None
-
-# conn = sqlite3.connect(paths.get_tt_db_path())
 
 
 async def save_tt_clip(**data):
@@ -52,7 +45,7 @@ async def update_tt_video_goal(goal):
 
 async def add_tt_acc_to_user(user_id, tt_acc_link):
     async with conn.transaction():
-        await conn.execute('UPDATE users SET tt_acc_link = $2 WHERE user_id = $1',
+        await conn.execute('UPDATE users SET tt_acc_link = $2 WHERE telegram_id = $1',
                            user_id, tt_acc_link)
 
     return True
@@ -93,7 +86,7 @@ async def clips_for_work(user_id):
 # TODO сделать таймаут для пропущенных видосов (допустим по 10 минут с проверкой после нажатия кнопки юзером)
 async def get_skipped_videos(user_id):
     skipped_clips_str = await conn.fetchval(
-        'SELECT skipped_videos FROM users WHERE user_id = $1',
+        'SELECT skipped_videos FROM users WHERE telegram_id = $1',
         user_id
     )
 
@@ -129,7 +122,7 @@ async def edit_promo_status(number, status):
         print(delta)
 
         client_id = sql_fetchall[0][2]
-        cur.execute('''UPDATE users SET balance = balance + ? WHERE user_id = ?''', (delta, client_id,))
+        cur.execute('''UPDATE users SET balance = balance + ? WHERE telegram_id = ?''', (delta, client_id,))
         conn.commit()
 
         cur.close()
@@ -154,7 +147,7 @@ async def delete_tt_clip_from_promo_db(order_id):
 
 async def is_user_in_db_tt(used_id):
     count_of_user_id_in_db = await conn.fetchval(
-        'SELECT COUNT(user_id) FROM users WHERE user_id = $1',
+        'SELECT COUNT(telegram_id) FROM users WHERE telegram_id = $1',
         used_id
     )
 
@@ -162,38 +155,41 @@ async def is_user_in_db_tt(used_id):
     return count_of_user_id_in_db
 
 
-async def add_user_to_db_tt(new_user_id, username, **ref_father):
+async def add_user(new_user_id, username, **ref_father):
     if ref_father:
         ref_father = ref_father['ref_father']
 
+        # TODO воткнуть еще дату
         async with conn.transaction():
-            await conn.execute('INSERT INTO users(user_id, balance, alltime_clips, referrals, '
-                               'skipped_videos, alltime_get_clips, ref_father, username)'
-                               'VALUES($1, $2 , $3, $4, $5, $6, $7, $8)',
-                               new_user_id, 0, 0, str([]), str({}), 0, ref_father, username)
+            await conn.execute('INSERT INTO users(telegram_id, balance, alltime_clips, referrals, '
+                               'skipped_videos, alltime_get_clips, ref_father, username, reg_date)'
+                               'VALUES($1, $2 , $3, $4, $5, $6, $7, $8, $9)',
+                               new_user_id, 0, 0, str([]), str({}), 0, ref_father, username,
+                               datetime.datetime.now())
 
             referrals_of_ref_father = await conn.fetchval(
-                'SELECT referrals FROM users WHERE user_id = $1',
+                'SELECT referrals FROM users WHERE telegram_id = $1',
                 ref_father
             )
             referrals_of_ref_father = eval(referrals_of_ref_father)
             referrals_of_ref_father.append(new_user_id)
             referrals_of_ref_father = str(referrals_of_ref_father)
 
-            await conn.execute('UPDATE users SET referrals = $2 WHERE user_id = $1',
+            await conn.execute('UPDATE users SET referrals = $2 WHERE telegram_id = $1',
                                ref_father, referrals_of_ref_father)
 
     else:
         async with conn.transaction():
-            await conn.execute('INSERT INTO users(user_id, balance, alltime_clips, referrals, '
-                               'skipped_videos, alltime_get_clips, username)'
-                               'VALUES($1, $2, $3, $4, $5, $6, $7)',
-                               new_user_id, 0, 0, str([]), str({}), 0, username)
+            await conn.execute('INSERT INTO users(telegram_id, balance, alltime_clips, referrals, '
+                               'skipped_videos, alltime_get_clips, username, reg_date)'
+                               'VALUES($1, $2, $3, $4, $5, $6, $7, $8)',
+                               new_user_id, 0, 0, str([]), str({}), 0, username,
+                               datetime.datetime.now())
 
 
 async def add_video_to_skipped(user_id, clip_id):
     skipped_videos = await conn.fetchval(
-        'SELECT skipped_videos FROM users WHERE user_id = $1',
+        'SELECT skipped_videos FROM users WHERE telegram_id = $1',
         user_id
     )
 
@@ -202,7 +198,7 @@ async def add_video_to_skipped(user_id, clip_id):
 
     skipped_videos[clip_id] = datetime.datetime.now()
     async with conn.transaction():
-        await conn.execute('UPDATE users SET skipped_videos = $2 WHERE user_id = $1',
+        await conn.execute('UPDATE users SET skipped_videos = $2 WHERE telegram_id = $1',
                            user_id, (str(skipped_videos)))
 
 
@@ -229,7 +225,7 @@ async def confirm_clip_update_status(order_id):
         async with conn.transaction():
             await conn.execute('UPDATE clips SET status = 1 WHERE order_id = $1',
                                order_id)
-            await conn.execute('UPDATE users SET balance = balance - $2 WHERE user_id = $1',
+            await conn.execute('UPDATE users SET balance = balance - $2 WHERE telegram_id = $1',
                                client_id, clip_goal)
 
         return True
@@ -241,7 +237,7 @@ async def get_user_balance_tt(user_id):
     # TODO разобраться че лучше юзать: пулл или коннект и как лучше юзать пулл
     # async with conn.acquire() as connection:
     balance = await conn.fetchval(
-        'SELECT balance FROM users WHERE user_id = $1',
+        'SELECT balance FROM users WHERE telegram_id = $1',
         user_id,
     )
 
@@ -250,7 +246,7 @@ async def get_user_balance_tt(user_id):
 
 async def get_tt_account_link(user_id):
     tt_acc_link = await conn.fetchval(
-        'SELECT tt_acc_link FROM users WHERE user_id = $1',
+        'SELECT tt_acc_link FROM users WHERE telegram_id = $1',
         user_id,
     )
 
@@ -259,7 +255,7 @@ async def get_tt_account_link(user_id):
 
 async def get_alltime_clips(user_id):
     alltime_clips = await conn.fetchval(
-        'SELECT alltime_clips FROM users WHERE user_id = $1',
+        'SELECT alltime_clips FROM users WHERE telegram_id = $1',
         user_id,
     )
 
@@ -268,7 +264,7 @@ async def get_alltime_clips(user_id):
 
 async def alltime_get_clips(user_id):
     all_time_get_clips = await conn.fetchval(
-        'SELECT alltime_get_clips FROM users WHERE user_id = $1',
+        'SELECT alltime_get_clips FROM users WHERE telegram_id = $1',
         user_id,
     )
 
@@ -294,14 +290,14 @@ def get_tt_acc_name(url):
 
 async def update_tt_acc_username(user_id):
     tt_acc_link = await conn.fetchval(
-        'SELECT tt_acc_link FROM users WHERE user_id = $1',
+        'SELECT tt_acc_link FROM users WHERE telegram_id = $1',
         user_id,
     )
 
     tt_acc_username = get_tt_acc_name(tt_acc_link)
 
     async with conn.transaction():
-        await conn.execute('UPDATE users SET tt_acc_username = $1 WHERE user_id = $2',
+        await conn.execute('UPDATE users SET tt_acc_username = $1 WHERE telegram_id = $2',
                            tt_acc_username, user_id)
 
     return tt_acc_username
@@ -309,7 +305,7 @@ async def update_tt_acc_username(user_id):
 
 # TODO пока не юзается
 def update_tt_acc_username_all():
-    user_tt_links = conn.execute(f'SELECT user_id, tt_acc_link FROM users WHERE tt_acc_username IS NULL')
+    user_tt_links = conn.execute(f'SELECT telegram_id, tt_acc_link FROM users WHERE tt_acc_username IS NULL')
     user_tt_links = user_tt_links.fetchall()
 
     # TODO флаг на проверку, нужен ли коммит в БД
@@ -323,7 +319,7 @@ def update_tt_acc_username_all():
             print(tt_username)
 
             cur = conn.cursor()
-            cur.execute('''UPDATE users SET tt_acc_username = ? WHERE user_id = ?''', (tt_username, user_link_tuple[0]))
+            cur.execute('''UPDATE users SET tt_acc_username = ? WHERE telegram_id = ?''', (tt_username, user_link_tuple[0]))
 
             db_updated = True
 
@@ -333,7 +329,7 @@ def update_tt_acc_username_all():
 
 async def is_return_clip_in_queue(user_id, clip_id):
     skipped_clips = await conn.fetchval(
-        'SELECT skipped_videos FROM users WHERE user_id = $1',
+        'SELECT skipped_videos FROM users WHERE telegram_id = $1',
         user_id,
     )
 
@@ -344,7 +340,7 @@ async def is_return_clip_in_queue(user_id, clip_id):
     del skipped_clips[clip_id]
 
     async with conn.transaction():
-        await conn.execute('UPDATE users SET skipped_videos = $2 WHERE user_id = $1',
+        await conn.execute('UPDATE users SET skipped_videos = $2 WHERE telegram_id = $1',
                            user_id, (str(skipped_clips)))
 
 
@@ -430,20 +426,20 @@ def get_clip_id_from_url(url):
 
 async def deposit_money_to_balance(user_id, payment_amount):
     user_balance = await conn.fetchval(
-        'SELECT balance FROM users WHERE user_id =  $1',
+        'SELECT balance FROM users WHERE telegram_id =  $1',
         user_id,
     )
 
     user_new_balance = user_balance + payment_amount
 
     async with conn.transaction():
-        await conn.execute('UPDATE users SET balance = $2 WHERE user_id = $1',
+        await conn.execute('UPDATE users SET balance = $2 WHERE telegram_id = $1',
                            user_id, user_new_balance)
 
 
 async def get_referrals_count(user_id):
     ref_list = await conn.fetchval(
-        'SELECT referrals FROM users WHERE user_id = $1',
+        'SELECT referrals FROM users WHERE telegram_id = $1',
         user_id,
     )
 
@@ -467,7 +463,7 @@ async def pay_all_completed_user_tasks(user_id):
 
     async with conn.transaction():
         await conn.execute('UPDATE users SET balance = balance + $2,'
-                           'alltime_clips = alltime_clips + $3 WHERE user_id = $1',
+                           'alltime_clips = alltime_clips + $3 WHERE telegram_id = $1',
                            user_id, clip_payment_count * CLIP_PAYMENT, clip_payment_count)
 
         await conn.execute('UPDATE tasks SET status = 1 WHERE user_id = $1',
@@ -485,7 +481,7 @@ async def pay_completed_user_task(user_id, task_id):
 
     async with conn.transaction():
         await conn.execute('UPDATE users SET balance = balance + $2,'
-                           'alltime_clips = alltime_clips + $3 WHERE user_id = $1',
+                           'alltime_clips = alltime_clips + $3 WHERE telegram_id = $1',
                            user_id, clip_payment_count * CLIP_PAYMENT, clip_payment_count)
 
         await conn.execute('UPDATE tasks SET status = 1 WHERE user_id = $1',
@@ -505,7 +501,7 @@ async def get_unverified_withdraw_funds():
         user_id = withdraw[0]
 
         tt_user_link = await conn.fetchval(
-            'SELECT tt_acc_link FROM users WHERE user_id = $1',
+            'SELECT tt_acc_link FROM users WHERE telegram_id = $1',
             user_id
         )
 
@@ -560,7 +556,7 @@ async def get_first_unverified_withdraw_funds():
                 withdraw_id_list = [withdraw_id]
 
             tt_user_link = await conn.fetchval(
-                'SELECT tt_acc_link FROM users WHERE user_id = $1',
+                'SELECT tt_acc_link FROM users WHERE telegram_id = $1',
                 first_unverified_withdraw_used_id
             )
 
@@ -575,13 +571,13 @@ async def get_first_unverified_withdraw_funds():
 
 async def increase_balance_tt(user_id, balance_increase):
     count = await conn.fetchval(
-        'SELECT COUNT(user_id) FROM users WHERE user_id = $1',
+        'SELECT COUNT(telegram_id) FROM users WHERE telegram_id = $1',
         user_id
     )
 
     if count == 1:
         async with conn.transaction():
-            await conn.execute('UPDATE users SET balance = balance + $2 WHERE user_id = $1',
+            await conn.execute('UPDATE users SET balance = balance + $2 WHERE telegram_id = $1',
                                user_id, balance_increase)
 
         return 'Баланс пользователя был успешно изменён.'
@@ -591,7 +587,7 @@ async def increase_balance_tt(user_id, balance_increase):
 
 async def change_balance_tt(user_id, new_balance):
     async with conn.transaction():
-        await conn.execute('UPDATE users SET balance = $2 WHERE user_id = $1',
+        await conn.execute('UPDATE users SET balance = $2 WHERE telegram_id = $1',
                            user_id, new_balance)
 
     return True
@@ -610,7 +606,7 @@ async def submit_withdraw(withdraw_id):
 
 async def get_all_user_id():
     user_id_list = await conn.fetch(
-        'SELECT user_id FROM users'
+        'SELECT telegram_id FROM users'
     )
 
     user_id_list = [user_id[0] for user_id in user_id_list]
@@ -640,18 +636,18 @@ async def update_user_alltime_get_clips(clip_order_id, add_clip_count):
 
     async with conn.transaction():
         await conn.execute('UPDATE users SET alltime_get_clips = alltime_get_clips + $2 '
-                           'WHERE user_id = $1', user_id, add_clip_count)
+                           'WHERE telegram_id = $1', user_id, add_clip_count)
 
     return True
 
 
 async def pay_by_referral(user_id):
-    ref_father = await conn.fetchval('SELECT ref_father FROM users WHERE user_id = $1',
+    ref_father = await conn.fetchval('SELECT ref_father FROM users WHERE telegram_id = $1',
                                      user_id)
 
     if ref_father:
         async with conn.transaction():
-            await conn.execute('UPDATE users SET balance = (balance + $2) WHERE user_id = $1',
+            await conn.execute('UPDATE users SET balance = (balance + $2) WHERE telegram_id = $1',
                                ref_father, REF_BONUS)
 
         return ref_father
@@ -694,3 +690,26 @@ async def get_data_all_tables():
             data.append(table_dict)
 
     return data
+
+
+# TODO переделать админский бан юзера
+def ban_user(user_id, decision):
+    count = conn.execute('''SELECT COUNT(id) FROM black_list WHERE id = ?''', (user_id,))
+    user_id = int(user_id)
+    decision = int(decision)
+    if decision == 1:
+        count = count.fetchall()[0][0]
+        if count == 1:
+            conn.execute('''DELETE FROM black_list WHERE id = ?''')
+            conn.commit()
+            return 'Пользователь был успешно удален из черного списка.'
+        else:
+            return 'Пользователь не был найден в черном списке или произошла непредвиденая ошибка'
+    if decision == 0:
+        count = count.fetchall()[0][0]
+        if count == 0:
+            conn.execute('''INSERT INTO black_list(id) VALUES(?)''', (user_id,))
+            conn.commit()
+            return 'Пользователь был успешно добавлен в черный список.'
+        else:
+            return 'Пользователь уже добавлен в черный список или произошла непредвиденная ошибка.'
