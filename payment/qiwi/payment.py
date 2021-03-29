@@ -32,6 +32,7 @@ def create_withdraw_funds_table():
     conn.commit()
 
 
+# записываем инфу скок пользователь бабок хочет закинуть
 async def add_user_payment(user_id, money_amount):
     payment_comment = generate_comment(user_id)
 
@@ -44,10 +45,6 @@ async def add_user_payment(user_id, money_amount):
     payment_id = await conn.fetchval(
         'SELECT MAX(payment_id) FROM payment'
     )
-
-    async with conn.transaction():
-        await conn.execute('INSERT INTO user_payments(user_id, payment_id) VALUES($1, $2)',
-                           user_id, payment_id)
 
     return payment_comment, payment_id
 

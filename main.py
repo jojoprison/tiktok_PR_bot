@@ -2,7 +2,8 @@ import logging
 import logging.config
 import random
 import time
-import datetime
+import asyncio
+import pytz
 
 from aiogram import Bot, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -107,13 +108,14 @@ def get_logger_name_main():
 
 
 # TODO Доделать таймер
-def update_tt_usernames(time_interval):
+async def update_tt_usernames(time_interval):
     while True:
         print('Doing timer work')
         update_tt_acc_username_all()
         time.sleep(time_interval)
 
 
+# заплатить пользователю за все выполненные задания в базе
 async def pay_user_for_tasks(user_id, delay):
     await asyncio.sleep(delay)
 
@@ -125,7 +127,6 @@ async def pay_user_for_tasks(user_id, delay):
     return payment_sum
 
 
-# TODO Доделать таймер
 async def return_clip_int_queue(user_id, clip_id, delay):
     await asyncio.sleep(delay)
 
@@ -155,16 +156,16 @@ async def command_start(m: types.Message):
                 logger.info(f'try to reg user {user_id} by referral {argument}')
 
                 argument = int(argument)
-                await add_user_to_db_tt(user_id, username, ref_father=argument)
+                await add_user(user_id, username, ref_father=argument)
 
                 logger.info(f'user {user_id} registered with by referral {argument}')
 
                 await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
                 await bot.send_message(text=await NEW_REFERRAL(argument), chat_id=argument)
             else:
-                await add_user_to_db_tt(user_id, username)
+                await add_user(user_id, username)
 
-                logger.info(f'user {argument} default registered')
+                logger.info(f'user {str(argument)} default registered')
 
                 await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
 
@@ -205,6 +206,10 @@ async def command_not_admin(m: types.Message):
 async def profile_button_handle(m: types.Message):
     state = dp.current_state(user=m.from_user.id)
     await state.reset_state()
+
+    # обновляем username пользователя в базе
+    username = m.from_user.username
+
 
     balance_manipulations = InlineKeyboardMarkup()
     balance_manipulations.add(
@@ -828,7 +833,7 @@ async def handle_user_for_uban(m: types.Message):
         id = list[0]
         decision = list[1]
         if id.isdigit() and decision.isdigit():
-            result = uban_user(id, decision)
+            result = ban_user(id, decision)
             await m.reply(result, reply=False)
             if int(decision) == 0:
                 await bot.send_message(id, YOU_WAS_BANNED)
@@ -1072,7 +1077,7 @@ async def skip_clip(c: types.CallbackQuery):
 
         logger.info(f'user {user_id} start timer to return clip to queue {clip_id} for 1800 sec')
         # таймер на 30 минут для появления видоса в списке на продвижение
-        return_clip_in_queue_success = asyncio.create_task(return_clip_int_queue(user_id, clip_id, 1800))
+        return_clip_in_queue_success = asyncio.create_task(return_clip_int_queue(user_id, clip_id, 3))
         if await return_clip_in_queue_success:
             # отправит сообщение о появлении нового клипа
             await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
@@ -1114,6 +1119,7 @@ async def admin_mail_button(c: types.CallbackQuery):
     logger.info(f'admin {user_id} wanna mailing')
 
     await c.message.edit_text(SEND_MESSAGE_FOR_SEND, parse_mode='Markdown', reply_markup=cancel_menu)
+
     state = dp.current_state(user=c.from_user.id)
     await state.set_state('GET_MSG_FOR_MAIL')
 

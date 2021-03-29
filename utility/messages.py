@@ -1,5 +1,3 @@
-from config.settings import *
-from functional.functions_old import *
 from functional.functions_tt import *
 
 # TODO сделать из линка на правила гиперссылку
@@ -73,11 +71,6 @@ def TT_LINK_VIDEO_ERR():
 
 def TT_LINK_ACC_ERR():
     return 'Вы прислали некорректную ссылку на ТТ аккаунт или вообще не ее! негодяй, меняй все!'
-
-
-def SEND_SUB_COUNT_1(m):
-    send_sub_count = f'😀 Хорошо. Теперь отправьте нужное вам количество подписчиков.\n*Доступно:* {user_balance(m.from_user.id)}'
-    return send_sub_count
 
 
 async def NEW_REFERRAL(argument):
