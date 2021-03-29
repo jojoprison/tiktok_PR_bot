@@ -14,7 +14,7 @@ CLIP_PAYMENT = 9
 # реферальный бонус (рубли)
 REF_BONUS = 1
 
-# TODO куки для тиктока (обновлять)
+# TODO куки для тиктока (обновлять) / обновляется редко
 TT_VERIFY_FP = 'verify_klv5c5xg_nEikqRKz_up6a_4o0n_Bzh2_qD4CuJUGbEDh'
 
 LOG_CONFIG_DICT = {
@@ -35,7 +35,7 @@ LOG_CONFIG_DICT = {
         'formatters': {
             'default_formatter': {
                 'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                'datefmt': '%Y-%m-%d %H:%M:%S :z'
+                'datefmt': '%Y-%m-%d %H:%M:%S %:z'
             }
         }
     }

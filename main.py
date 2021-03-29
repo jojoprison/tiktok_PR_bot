@@ -63,8 +63,8 @@ class UserStates(Helper):
     GET_SUB_COUNT = ListItem()
     CONFIRMATION = ListItem()
     GET_MSG_FOR_MAIL = ListItem()
-    GET_USER_FOR_UBAN = ListItem()
-    GET_USER_FOR_CHB = ListItem()
+    ADMIN_BAN = ListItem()
+    ADMIN_CHANGE_BALANCE = ListItem()
 
 
 main_menu = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -150,22 +150,27 @@ async def command_start(m: types.Message):
 
         logger = logging.getLogger(f'{get_logger_name_main()}.{command_start.__name__}')
 
-        if (argument is not None) and (argument.isdigit() is True) and (await is_user_in_db_tt(int(argument))) == 1:
-            logger.info(f'try to reg user {user_id} by referral {argument}')
+        try:
+            if (argument is not None) and (argument.isdigit() is True) and (await is_user_in_db_tt(int(argument))) == 1:
+                logger.info(f'try to reg user {user_id} by referral {argument}')
 
-            argument = int(argument)
-            await add_user_to_db_tt(user_id, username, ref_father=argument)
+                argument = int(argument)
+                await add_user_to_db_tt(user_id, username, ref_father=argument)
 
-            logger.info(f'user {user_id} registered with by referral {argument}')
+                logger.info(f'user {user_id} registered with by referral {argument}')
 
-            await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
-            await bot.send_message(text=await NEW_REFERRAL(argument), chat_id=argument)
-        else:
-            await add_user_to_db_tt(user_id, username)
+                await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
+                await bot.send_message(text=await NEW_REFERRAL(argument), chat_id=argument)
+            else:
+                await add_user_to_db_tt(user_id, username)
 
-            logger.info(f'user {argument} default registered')
+                logger.info(f'user {argument} default registered')
 
-            await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
+                await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
+
+        except Exception as e:
+            logger.error(f'{user_id} got ex: {e}')
+            await m.reply('Произошла ошибка, нажмите кнопку "Отмена"', reply_markup=cancel_menu)
     else:
         await m.reply(UPDATE, reply=False, parse_mode='HTML', reply_markup=main_menu)
 
@@ -219,14 +224,16 @@ async def add_tt_video_handle(m: types.Message):
 
 @dp.message_handler(content_types=['text'], state='GET_TT_VIDEO')
 async def tt_video_handle(m: types.Message):
+
+    logger = logging.getLogger(f'{get_logger_name_main()}.{tt_video_handle.__name__}')
+    user_id = m.from_user.id
+
     try:
         if m.content_type == 'text':
             clip_link = m.text
 
-            logger = logging.getLogger(f'{get_logger_name_main()}.{tt_video_handle.__name__}')
-
             if valid_tt_link(clip_link):
-                logger.info(f'user {m.from_user.id} wanna add {clip_link}')
+                logger.info(f'user {user_id} wanna add {clip_link}')
 
                 # TODO заглушка
                 # tt_clip_data = get_music_id_from_clip_tt(clip_link)
@@ -237,7 +244,7 @@ async def tt_video_handle(m: types.Message):
                 tt_music_id = 2
 
                 # TODO сохранять видос/линк на него в БД
-                order_id = await save_tt_clip(client=m.from_user.id, clip_link=clip_link,
+                order_id = await save_tt_clip(client=user_id, clip_link=clip_link,
                                               clip_id=tt_clip_id, music_id=tt_music_id)
 
                 logger.info(f'clip added {clip_link}')
@@ -248,26 +255,26 @@ async def tt_video_handle(m: types.Message):
                     InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(order_id)))
 
                 await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
-                await m.reply(await SEND_CLIP_COUNT(m.from_user.id, clip_link), reply=False, parse_mode='HTML',
+                await m.reply(await SEND_CLIP_COUNT(user_id, clip_link), reply=False, parse_mode='HTML',
                               reply_markup=cancel_promotion)
 
-                state = dp.current_state(user=m.from_user.id)
+                state = dp.current_state(user=user_id)
 
                 # TODO поменять статус и начать пиар видео
                 await state.set_state('SEND_CLIP_COUNT')
             else:
-                logger.info(f'user {m.from_user.id} FALL with adding clip {clip_link}')
+                logger.info(f'user {user_id} FALL with adding clip {clip_link}')
 
                 cancel = InlineKeyboardMarkup()
                 cancel.add(
                     InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
 
-                await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+                await bot.delete_message(message_id=m.message_id - 1, chat_id=user_id)
                 await m.reply(WRONG_TT_CLIP_LINK, reply=False, parse_mode='HTML',
                               reply_markup=cancel)
 
         else:
-            await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+            await bot.delete_message(message_id=m.message_id - 1, chat_id=user_id)
 
             cancel_promotion = InlineKeyboardMarkup()
             # TODO сделать обработку этой кнопки отмены
@@ -279,7 +286,8 @@ async def tt_video_handle(m: types.Message):
                           reply_markup=cancel_menu)
 
     except Exception as e:
-        await m.reply(e, reply_markup=cancel_menu)
+        logger.error(f'{user_id} got ex: {e}')
+        await m.reply('Произошла ошибка, нажмите кнопку "Отмена"', reply_markup=cancel_menu)
 
 
 # TODO сделать метод обработки ссылки
@@ -323,8 +331,8 @@ async def get_money(m: types.Message):
     if await tt_acc_not_exist(user_id):
         logger.info(f'user {user_id} dont have tiktok_username name in db')
 
-        state = dp.current_state(user=user_id)
         await state.set_state('REG_TT_ACCOUNT')
+
         await m.reply(TT_ACCOUNT, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
     else:
         # стейт мешает потом опять зайти в эту функцию
@@ -333,28 +341,26 @@ async def get_money(m: types.Message):
 
         logger.info(f'user {user_id} get clips for work')
 
-        clips_info = await get_clips_for_work(user_id)
+        try:
+            clips_info = await get_clips_for_work(user_id)
 
-        logger.info(f'user {user_id} got clips for work')
+            logger.info(f'user {user_id} got clips for work')
 
-        if clips_info.get('clips_exist'):
-            logger.info(f'user {user_id} got clips and exist to work /')
+            if clips_info.get('clips_exist'):
+                logger.info(f'user {user_id} got clips and exist to work /')
 
-            await m.reply(clips_info.get('reply_msg'),
-                          reply_markup=clips_info.get('inline_kb'),
-                          reply=False)
-        else:
-            logger.info(f'user {user_id} got clips, no working ><')
+                await m.reply(clips_info.get('reply_msg'),
+                              reply_markup=clips_info.get('inline_kb'),
+                              reply=False)
+            else:
+                logger.info(f'user {user_id} got clips, no working ><')
 
-            await m.reply(clips_info.get('reply_msg'),
-                          reply=False)
+                await m.reply(clips_info.get('reply_msg'),
+                              reply=False)
 
-        # try:
-        #
-        # except Exception as e:
-        #     pass
-        #     # TODO понять из за чего это все
-        #     # print('Exc via reply clip list to user:\n' + str(e))
+        except Exception as e:
+            logger.error(f'{user_id} got ex: {e}')
+            await m.reply('Произошла ошибка, нажмите кнопку "Отмена"', reply_markup=cancel_menu)
 
 
 async def get_clips_for_work(user_id):
@@ -466,7 +472,7 @@ async def tt_username_connect(m: types.Message):
 
     except Exception as e:
         logger.error(f'{user_id} got ex: {e}')
-        await m.reply('поймал ошибку :(', reply_markup=cancel_menu)
+        await m.reply('Произошла ошибка, нажмите кнопку "Отмена"', reply_markup=cancel_menu)
 
 
 # TODO доделать покупку клипов
@@ -484,29 +490,36 @@ async def send_clip_count(m: types.Message):
         video_to_promo_count = int(m.text)
         logger.info(f'{user_id} update clip_order_goal {video_to_promo_count}')
 
-        # TODO передавать order_id через внутреннюю переменную state
-        order_id = await update_tt_video_goal(video_to_promo_count)
+        try:
+            # TODO передавать order_id через внутреннюю переменную state
+            order_id = await update_tt_video_goal(video_to_promo_count)
 
-        logger.info(f'{user_id} clip_order_goal in clip {order_id} updated {video_to_promo_count}')
+            logger.info(f'{user_id} clip_order_goal in clip {order_id} updated {video_to_promo_count}')
 
-        confirmation_menu = InlineKeyboardMarkup()
-        confirmation_menu.add(
-            InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(order_id)),
-            InlineKeyboardButton(text='✅ Подтвердить', callback_data='confirm_' + str(order_id)))
+            confirmation_menu = InlineKeyboardMarkup()
+            confirmation_menu.add(
+                InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(order_id)),
+                InlineKeyboardButton(text='✅ Подтвердить', callback_data='confirm_' + str(order_id)))
 
-        state = dp.current_state(user=user_id)
-        await state.set_state('CONFIRMATION')
+            state = dp.current_state(user=user_id)
+            await state.set_state('CONFIRMATION')
 
-        await bot.delete_message(message_id=m.message_id - 1, chat_id=user_id)
+            await bot.delete_message(message_id=m.message_id - 1, chat_id=user_id)
 
-        # TODO выводить ссылку на видос
-        await m.reply(
-            CONFIRM_ADDING_VIDEO_TO_PROMO(video_to_promo_count, video_to_promo_count * CASH_MIN),
-            reply=False,
-            reply_markup=confirmation_menu)
+            # TODO выводить ссылку на видос
+            await m.reply(
+                CONFIRM_ADDING_VIDEO_TO_PROMO(video_to_promo_count, video_to_promo_count * CASH_MIN),
+                reply=False,
+                reply_markup=confirmation_menu)
+
+        except Exception as e:
+            logger.error(f'{user_id} got ex: {e}')
+            await m.reply('Произошла ошибка, нажмите кнопку "Отмена"', reply_markup=cancel_menu)
+
     else:
         logger.info(f'{user_id} not enough balance to PR clip')
 
+        # TODO придумать передачу этого order_id через стейт машину
         order_id = await get_video_stat(user_id)
 
         # TODO убрать кнопку и удалять видос из базы или ставить статус говна
@@ -533,28 +546,33 @@ async def top_up_balance(m: types.Message):
 
         logger.info(f'{user_id} add user payment with {money_amount} money')
 
-        payment_info = await add_user_payment(user_id, money_amount)
-        payment_comment = payment_info[0]
-        payment_id = payment_info[1]
+        try:
+            payment_info = await add_user_payment(user_id, money_amount)
+            payment_comment = payment_info[0]
+            payment_id = payment_info[1]
 
-        logger.info(f'{user_id} user payment {payment_id} with {money_amount}')
+            logger.info(f'{user_id} user payment {payment_id} with {money_amount}')
 
-        # TODO придумать че делать, когда отправляется список объектов
-        await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
-        # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+            # TODO придумать че делать, когда отправляется список объектов
+            await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+            # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
 
-        payment_menu = InlineKeyboardMarkup()
-        payment_menu.add(
-            InlineKeyboardButton(text='Проверить оплату', callback_data='check_payment_' + str(payment_id)),
-            InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+            payment_menu = InlineKeyboardMarkup()
+            payment_menu.add(
+                InlineKeyboardButton(text='Проверить оплату', callback_data='check_payment_' + str(payment_id)),
+                InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
 
-        state = dp.current_state(user=m.from_user.id)
-        await state.set_state('CONFIRM_TOP_UP_BALANCE')
+            state = dp.current_state(user=m.from_user.id)
+            await state.set_state('CONFIRM_TOP_UP_BALANCE')
 
-        # TODO запищивать в стейт машину, чтоб в ответе на неправильное сообщение реплаить на него
-        top_up_balance_message_id = await m.reply(
-            MONEYS(money_amount, payment_comment),
-            reply=False, reply_markup=payment_menu, parse_mode='HTML')
+            # TODO запищивать в стейт машину, чтоб в ответе на неправильное сообщение реплаить на него
+            top_up_balance_message_id = await m.reply(
+                MONEYS(money_amount, payment_comment),
+                reply=False, reply_markup=payment_menu, parse_mode='HTML')
+
+        except Exception as e:
+            logger.error(f'{user_id} got ex: {e}')
+            await m.reply('Произошла ошибка, нажмите кнопку "Отмена"', reply_markup=cancel_menu)
     else:
         logger.info(f'{user_id} invalid money_amount {m.text}')
 
@@ -575,7 +593,6 @@ async def confirm_top_up_balance(m: types.Message):
     await bot.send_message(chat_id=user_id,
                            text='Нажмите одну из кнопок операций с пополнением баланса выше',
                            reply_to_message_id=m.message_id - 1)
-    # await m.reply()
 
 
 # проверка данных для вывода средств
@@ -653,33 +670,38 @@ async def withdraw_funds_location(m: types.Message):
 
         logger.info(f'{user_id} try to valid withdraw funds location number: {withdraw_funds_number}')
 
-        withdraw_number_validation = valid_withdraw_number(withdraw_funds_number)
+        try:
+            withdraw_number_validation = valid_withdraw_number(withdraw_funds_number)
 
-        if withdraw_number_validation[0]:
-            last_withdraw_id = await get_last_withdraw()
+            if withdraw_number_validation[0]:
+                last_withdraw_id = await get_last_withdraw()
 
-            logger.info(f'{user_id} update withdraw location number')
+                logger.info(f'{user_id} update withdraw location number')
 
-            await update_withdraw_location(last_withdraw_id, withdraw_number_validation[1],
-                                           withdraw_funds_number)
+                await update_withdraw_location(last_withdraw_id, withdraw_number_validation[1],
+                                               withdraw_funds_number)
 
-            logger.info(f'{user_id} withdraw location number updated')
+                logger.info(f'{user_id} withdraw location number updated')
 
-            # TODO придумать че делать, когда отправляется список объектов
-            await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
+                # TODO придумать че делать, когда отправляется список объектов
+                await bot.edit_message_reply_markup(chat_id=user_id, message_id=bot_last_message_id)
 
-            withdraw_success_question = InlineKeyboardMarkup()
-            withdraw_success_question.add(
-                InlineKeyboardButton(text='Вывести', callback_data='withdraw_funds_' + str(last_withdraw_id)),
-                InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+                withdraw_success_question = InlineKeyboardMarkup()
+                withdraw_success_question.add(
+                    InlineKeyboardButton(text='Вывести', callback_data='withdraw_funds_' + str(last_withdraw_id)),
+                    InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
 
-            state = dp.current_state(user=m.from_user.id)
-            await state.set_state('WITHDRAW_FUNDS_WAIT_MONEY')
+                state = dp.current_state(user=m.from_user.id)
+                await state.set_state('WITHDRAW_FUNDS_WAIT_MONEY')
 
-            await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_number),
-                          reply=False, reply_markup=withdraw_success_question)
-        else:
-            logger.info(f'{user_id} withdraw location number invalid {withdraw_funds_number}')
+                await m.reply(WITHDRAW_FUNDS_SUCCESS_QUESTION(withdraw_funds_number),
+                              reply=False, reply_markup=withdraw_success_question)
+            else:
+                logger.info(f'{user_id} withdraw location number invalid {withdraw_funds_number}')
+
+        except Exception as e:
+            logger.error(f'{user_id} got ex: {e}')
+            await m.reply('Произошла ошибка, нажмите кнопку "Отмена"', reply_markup=cancel_menu)
     else:
         logger.info(f'{user_id} text is not text: {m.content_type}')
 
@@ -772,20 +794,10 @@ async def referral_button(m: types.Message):
 # канал где дайм делает делишки))
 @dp.message_handler(lambda m: m.text == 'Канал с выплатами')
 async def referral_button(m: types.Message):
-    # withdraw_success_question = InlineKeyboardMarkup()
-    # withdraw_success_question.add(
-    #     InlineKeyboardButton(text='Вывести', callback_data='withdraw_funds_' + str(last_withdraw_id)),
-    #     InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
-    #
-    # state = dp.current_state(user=m.from_user.id)
-    # await state.set_state('WITHDRAW_FUNDS_WAIT_MONEY')
-    # channel_menu = InlineKeyboardMarkup()
-    # channel_menu.add(InlineKeyboardButton(text='',
-    #                                  url=tt_video_link))
     await m.reply(CHANNEL_FOR_MONEY, reply=False, parse_mode='HTML')
 
 
-@dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, content_types=['text'], state='GET_USER_FOR_CHB')
+@dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, content_types=['text'], state='ADMIN_CHANGE_BALANCE')
 async def handle_user_for_chb(m: types.Message):
     change_balance_request = m.text.split(' ')
 
@@ -809,7 +821,7 @@ async def handle_user_for_chb(m: types.Message):
     await state.reset_state()
 
 
-@dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, content_types=['text'], state='GET_USER_FOR_UBAN')
+@dp.message_handler(lambda m: m.from_user.id in BOT_ADMINS, content_types=['text'], state='ADMIN_BAN')
 async def handle_user_for_uban(m: types.Message):
     list = m.text.split(' ')
     if len(list) == 2:
@@ -831,6 +843,7 @@ async def handle_user_for_uban(m: types.Message):
 @dp.callback_query_handler(lambda c: c.data == 'cancel', state='*')
 async def cancel_button_handle(c: types.callback_query):
     await c.message.edit_text(CANCEL_TEXT)
+
     state = dp.current_state(user=c.from_user.id)
     await state.reset_state()
 
@@ -862,7 +875,7 @@ async def cancel_button_with_id(c: types.callback_query):
         await state.reset_state()
 
 
-# TODO доделать
+# TODO доделать если нужно вообще (типа удаляет привязку акка из базы если вдруг юзер не так ввел)
 @dp.callback_query_handler(lambda c: 'cancel_tt_acc_' in c.data, state=['REG_TT_ACCOUNT'])
 async def cancel_tt_acc_button_handler(c: types.callback_query):
     # logger = logging.getLogger(f'{get_logger_name_main()}.{cancel_tt_acc_button_handler.__name__}')
@@ -895,31 +908,35 @@ async def check_payment(c: types.callback_query):
 
     logger.info(f'{user_id} try to check_payment with id: {payment_id}')
 
-    payment = await view_payment(payment_id)
-    payment_status = payment[0]
-    payment_amount = payment[1]
+    try:
+        payment = await view_payment(payment_id)
+        payment_status = payment[0]
+        payment_amount = payment[1]
 
-    print()
+        logger.info(f'{user_id} - {payment_id} payed {payment_amount} with status {payment_status}')
 
-    logger.info(f'{user_id} - {payment_id} payed {payment_amount} with status {payment_status}')
+        # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
 
-    # await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
+        if payment_status == 1:
+            await c.message.edit_text(MONEY_EARNED)
+            await deposit_money_to_balance(user_id, payment_amount)
 
-    if payment_status == 1:
-        await c.message.edit_text(MONEY_EARNED)
-        await deposit_money_to_balance(user_id, payment_amount)
+            state = dp.current_state(user=c.from_user.id)
+            await state.reset_state()
+        else:
+            payment_menu = InlineKeyboardMarkup()
+            payment_menu.add(
+                InlineKeyboardButton(text='Проверить оплату', callback_data='check_payment_' + str(payment_id)),
+                InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
 
-        state = dp.current_state(user=c.from_user.id)
-        await state.reset_state()
-    else:
-        payment_menu = InlineKeyboardMarkup()
-        payment_menu.add(
-            InlineKeyboardButton(text='Проверить оплату', callback_data='check_payment_' + str(payment_id)),
-            InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel'))
+            # TODO запихивать в стейт машину
+            top_up_balance_message_id = await bot.send_message(
+                user_id, MONEY_NOT_EARNED, reply_markup=payment_menu)
 
-        # TODO запищивать в стейт машину
-        top_up_balance_message_id = await bot.send_message(
-            user_id, MONEY_NOT_EARNED, reply_markup=payment_menu)
+    except Exception as e:
+        logger.error(f'{user_id} got ex: {e}')
+        await bot.send_message(user_id, 'Произошла ошибка, нажмите кнопку "Отмена"',
+                               reply_markup=cancel_menu)
 
 
 @dp.callback_query_handler(lambda c: 'confirm_' in c.data, state='CONFIRMATION')
@@ -931,28 +948,34 @@ async def confirm_clip_promo(c: types.callback_query):
 
     logger.info(f'user {user_id} try to confirm order {order_id}')
 
-    confirm_return = await confirm_clip_update_status(order_id)
+    try:
+        confirm_return = await confirm_clip_update_status(order_id)
 
-    if confirm_return:
-        logger.info(f'user {user_id} confirm order {order_id} success')
+        if confirm_return:
+            logger.info(f'user {user_id} confirm order {order_id} success')
 
-        await c.message.edit_text(CLIP_SUCCESSFULLY_ADDED)
-        state = dp.current_state(user=c.from_user.id)
-        await state.reset_state()
+            await c.message.edit_text(CLIP_SUCCESSFULLY_ADDED)
+            state = dp.current_state(user=c.from_user.id)
+            await state.reset_state()
 
-        for user_id in await get_all_user_id():
-            try:
-                await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
-            except BotBlocked:
-                pass
-                # print('User ' + str(user_id) + ' was banned US BOT FUCK! ;(')
+            for user_id in await get_all_user_id():
+                try:
+                    await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
+                except BotBlocked:
+                    pass
+                    # print('User ' + str(user_id) + ' was banned US BOT FUCK! ;(')
 
-    else:
-        logger.info(f'user {user_id} confirm order {order_id} failed')
+        else:
+            logger.info(f'user {user_id} confirm order {order_id} failed')
 
-        await c.message.edit_text(CLIP_IS_NOT_PROMO)
-        state = dp.current_state(user=user_id)
-        await state.reset_state()
+            await c.message.edit_text(CLIP_IS_NOT_PROMO)
+            state = dp.current_state(user=user_id)
+            await state.reset_state()
+
+    except Exception as e:
+        logger.error(f'{user_id} got ex: {e}')
+        await bot.send_message(user_id, 'Произошла ошибка, нажмите кнопку "Отмена"',
+                               reply_markup=cancel_menu)
 
 
 @dp.callback_query_handler(lambda c: 'check_clip_' in c.data)
@@ -964,51 +987,55 @@ async def check_clip(c: types.CallbackQuery):
 
     logger.info(f'check_clip user"s {user_id} for paying {clip_order_id}')
 
-    # TODO добавить проверку музыки по полю из БД
-    await check_clip_for_paying(user_id, clip_order_id)
-    user_alltime_clips = await get_alltime_clips(user_id)
+    try:
+        # TODO добавить проверку музыки по полю из БД
+        await check_clip_for_paying(user_id, clip_order_id)
+        user_alltime_clips = await get_alltime_clips(user_id)
 
-    state = dp.current_state(user=user_id)
+        state = dp.current_state(user=user_id)
 
-    logger.info(f'user"s clip_order {clip_order_id} success paying added {clip_order_id}')
+        logger.info(f'user"s clip_order {clip_order_id} success paying added {clip_order_id}')
 
-    # TODO запускать отдельно в другом месте
-    paying_task = asyncio.create_task(pay_user_for_tasks(user_id, 150))
-    reset_state_task = asyncio.create_task(state.reset_state())
-    send_msg_clip_checking_task = asyncio.create_task(c.message.edit_text(TT_CLIP_CHECKING))
+        # TODO запускать отдельно в другом месте
+        paying_task = asyncio.create_task(pay_user_for_tasks(user_id, 150))
+        reset_state_task = asyncio.create_task(state.reset_state())
+        send_msg_clip_checking_task = asyncio.create_task(c.message.edit_text(TT_CLIP_CHECKING))
 
-    logger.info(f'user {user_id} paying tasks async')
-    # сразу запускаем эту таску, чтобы пользователю побыстрее пришли бабки
-    payment_sum = await paying_task
-    # если клипы засчитались в другую проверку и нет смысла оповещать о 0 бабок
-    # (там их несколько подряд можно запустить)
-    if payment_sum != 0:
-        logger.info(f'user {user_id} update tables for paying')
+        logger.info(f'user {user_id} paying tasks async')
+        # сразу запускаем эту таску, чтобы пользователю побыстрее пришли бабки
+        payment_sum = await paying_task
+        # если клипы засчитались в другую проверку и нет смысла оповещать о 0 бабок
+        # (там их несколько подряд можно запустить)
+        if payment_sum != 0:
+            logger.info(f'user {user_id} update tables for paying')
 
-        user_in_abusers_status = await add_user_to_clip_abusers(clip_order_id, user_id)
-        alltime_get_clips_update_status = await update_user_alltime_get_clips(clip_order_id, 1)
+            user_in_abusers_status = await add_user_to_clip_abusers(clip_order_id, user_id)
+            alltime_get_clips_update_status = await update_user_alltime_get_clips(clip_order_id, 1)
 
-        if user_in_abusers_status and alltime_get_clips_update_status:
-            logger.info(f'user {user_id} gey paying')
+            if user_in_abusers_status and alltime_get_clips_update_status:
+                logger.info(f'user {user_id} get paying')
 
-            if user_alltime_clips == 0:
-                logger.info(f'user {user_id} pay by referral')
+                if user_alltime_clips == 0:
+                    logger.info(f'user {user_id} pay by referral')
 
-                ref_father_id = await pay_by_referral(user_id)
-                if ref_father_id:
-                    # отправит сообщение реф отцу об успешном выполнении задания его сыном
-                    await bot.send_message(ref_father_id, 'Ваш реферал только что выполнил первое задание! '
-                                                          'Вы получили ' + str(REF_BONUS) + ' RUB.')
-            # отправит сообщение, когда получит ответ о пополнении кошелька
-            await bot.send_message(user_id, 'Поздравляю! Вы получили ' + str(payment_sum) + ' RUB.')
-        else:
-            logger.info(f'user {user_id} not earn money')
+                    ref_father_id = await pay_by_referral(user_id)
+                    if ref_father_id:
+                        # отправит сообщение реф отцу об успешном выполнении задания его сыном
+                        await bot.send_message(ref_father_id, 'Ваш реферал только что выполнил первое задание! '
+                                                              'Вы получили ' + str(REF_BONUS) + ' RUB.')
+                # отправит сообщение, когда получит ответ о пополнении кошелька
+                await bot.send_message(user_id, 'Поздравляю! Вы получили ' + str(payment_sum) + ' RUB.')
+            else:
+                logger.info(f'user {user_id} not earn money')
 
-            print('чув ничего не получил, хотя пытался')
+        # запускаем такси смены состояния и отправки ответа от бота
+        await reset_state_task
+        await send_msg_clip_checking_task
 
-    # запускаем такси смены состояния и отправки ответа от бота
-    await reset_state_task
-    await send_msg_clip_checking_task
+    except Exception as e:
+        logger.error(f'{user_id} got ex: {e}')
+        await bot.send_message(user_id, 'Произошла ошибка, нажмите кнопку "Отмена"',
+                               reply_markup=cancel_menu)
 
 
 # TODO сделать обновление инлайн клавы и видоса при нажатии на кнопку
@@ -1022,32 +1049,38 @@ async def skip_clip(c: types.CallbackQuery):
     logger.info(f'user {user_id} try to skip clip {clip_id}')
     logger.info(f'user {user_id} add clip to skipped {clip_id}')
 
-    await add_video_to_skipped(user_id, clip_id)
+    try:
+        await add_video_to_skipped(user_id, clip_id)
 
-    await c.message.edit_text(TT_VIDEO_SKIPPED)
+        await c.message.edit_text(TT_VIDEO_SKIPPED)
 
-    logger.info(f'user {user_id} get awailable clips')
+        logger.info(f'user {user_id} get awailable clips')
 
-    clips_info = await get_clips_for_work(user_id)
+        clips_info = await get_clips_for_work(user_id)
 
-    if clips_info.get('clips_exist'):
-        logger.info(f'user {user_id} clips to work exist')
+        if clips_info.get('clips_exist'):
+            logger.info(f'user {user_id} clips to work exist')
 
-        await c.message.reply(clips_info.get('reply_msg'),
-                              reply_markup=clips_info.get('inline_kb'),
-                              reply=False)
-    else:
-        logger.info(f'user {user_id} clips to work NOT exist')
+            await c.message.reply(clips_info.get('reply_msg'),
+                                  reply_markup=clips_info.get('inline_kb'),
+                                  reply=False)
+        else:
+            logger.info(f'user {user_id} clips to work NOT exist')
 
-        await c.message.reply(clips_info.get('reply_msg'),
-                              reply=False)
+            await c.message.reply(clips_info.get('reply_msg'),
+                                  reply=False)
 
-    logger.info(f'user {user_id} start timer to return clip to queue {clip_id} for 1800 sec')
-    # таймер на 30 минут для появления видоса в списке на продвижение
-    return_clip_in_queue_success = asyncio.create_task(return_clip_int_queue(user_id, clip_id, 1800))
-    if await return_clip_in_queue_success:
-        # отправит сообщение о появлении нового клипа
-        await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
+        logger.info(f'user {user_id} start timer to return clip to queue {clip_id} for 1800 sec')
+        # таймер на 30 минут для появления видоса в списке на продвижение
+        return_clip_in_queue_success = asyncio.create_task(return_clip_int_queue(user_id, clip_id, 1800))
+        if await return_clip_in_queue_success:
+            # отправит сообщение о появлении нового клипа
+            await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
+
+    except Exception as e:
+        logger.error(f'{user_id} got ex: {e}')
+        await bot.send_message(user_id, 'Произошла ошибка, нажмите кнопку "Отмена"',
+                               reply_markup=cancel_menu)
 
 
 @dp.callback_query_handler(lambda c: c.data == 'stat')
@@ -1094,7 +1127,7 @@ async def admin_uban_button(c: types.CallbackQuery):
 
     await c.message.edit_text(SEND_USER_FOR_UBAN, reply_markup=cancel_menu)
     state = dp.current_state(user=c.from_user.id)
-    await state.set_state('GET_USER_FOR_UBAN')
+    await state.set_state('ADMIN_BAN')
 
 
 # админская функция вывода средст пользователем
@@ -1159,10 +1192,11 @@ async def top_up_balance(c: types.CallbackQuery):
     user_id = c.from_user.id
     logger.info(f'user {user_id} wanna top up balance')
 
-    await c.message.reply(TOP_UP_BALANCE, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
-    # await c.message.edit_text(TOP_UP_BALANCE, reply_markup=cancel_menu)
     state = dp.current_state(user=c.from_user.id)
     await state.set_state('TOP_UP_BALANCE')
+
+    await c.message.reply(TOP_UP_BALANCE, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
+    # await c.message.edit_text(TOP_UP_BALANCE, reply_markup=cancel_menu)
 
 
 # TODO дописать пополнение
@@ -1173,17 +1207,23 @@ async def withdraw_funds(c: types.CallbackQuery):
     user_id = c.from_user.id
     logger.info(f'user {user_id} wanna withdraw_funds')
 
-    balance = await get_user_balance_tt(user_id=user_id)
+    try:
+        balance = await get_user_balance_tt(user_id=user_id)
 
-    if balance >= 200:
-        await c.message.reply(WITHDRAW_FUNDS(balance), reply=False, parse_mode='HTML', reply_markup=cancel_menu)
+        if balance >= 200:
+            await c.message.reply(WITHDRAW_FUNDS(balance), reply=False, parse_mode='HTML', reply_markup=cancel_menu)
 
-        state = dp.current_state(user=user_id)
-        await state.set_state('WITHDRAW_FUNDS_VALIDATION')
-    else:
-        await c.message.reply(WITHDRAW_FUNDS_NOT_ENOUGH(balance), reply=False, parse_mode='HTML')
-        state = dp.current_state(user=user_id)
-        await state.reset_state()
+            state = dp.current_state(user=user_id)
+            await state.set_state('WITHDRAW_FUNDS_VALIDATION')
+        else:
+            await c.message.reply(WITHDRAW_FUNDS_NOT_ENOUGH(balance), reply=False, parse_mode='HTML')
+            state = dp.current_state(user=user_id)
+            await state.reset_state()
+
+    except Exception as e:
+        logger.error(f'{user_id} got ex: {e}')
+        await bot.send_message(user_id, 'Произошла ошибка, нажмите кнопку "Отмена"',
+                               reply_markup=cancel_menu)
 
 
 @dp.callback_query_handler(lambda c: 'withdraw_funds_' in c.data, state='WITHDRAW_FUNDS_WAIT_MONEY')
@@ -1194,19 +1234,25 @@ async def withdraw_funds_wait_money(c: types.CallbackQuery):
     withdraw_id = int(c.data.replace('withdraw_funds_', ''))
     logger.info(f'user {user_id} wanna withdraw_funds, withdraw_id = {withdraw_id}')
 
-    funds_amount = await update_withdraw_status(withdraw_id, 2)
+    try:
+        funds_amount = await update_withdraw_status(withdraw_id, 2)
 
-    user_id = c.from_user.id
-    current_user_balance = await get_user_balance_tt(user_id)
-    new_user_balance = current_user_balance - funds_amount
-    await change_balance_tt(user_id, new_user_balance)
+        user_id = c.from_user.id
+        current_user_balance = await get_user_balance_tt(user_id)
+        new_user_balance = current_user_balance - funds_amount
+        await change_balance_tt(user_id, new_user_balance)
 
-    logger.info(f'user"s {user_id} balance changed to {new_user_balance}')
+        logger.info(f'user"s {user_id} balance changed to {new_user_balance}')
 
-    state = dp.current_state(user=user_id)
-    await state.reset_state()
+        state = dp.current_state(user=user_id)
+        await state.reset_state()
 
-    await c.message.edit_text(WITHDRAW_FUNDS_WAIT_MONEY)
+        await c.message.edit_text(WITHDRAW_FUNDS_WAIT_MONEY)
+
+    except Exception as e:
+        logger.error(f'{user_id} got ex: {e}')
+        await bot.send_message(user_id, 'Произошла ошибка, нажмите кнопку "Отмена"',
+                               reply_markup=cancel_menu)
 
 
 @dp.callback_query_handler(lambda c: 'admin_withdraw_' in c.data)
@@ -1219,16 +1265,22 @@ async def admin_withdraw_button(c: types.CallbackQuery):
     logger = logging.getLogger(f'{get_logger_name_main()}.{admin_withdraw_button.__name__}')
     logger.info(f'admin {user_id} wanna submit some withdraws: {withdraw_id_list}')
 
-    for withdraw_id in converted_withdraw_id_list:
-        if withdraw_id != '':
-            await submit_withdraw(int(withdraw_id))
+    try:
+        for withdraw_id in converted_withdraw_id_list:
+            if withdraw_id != '':
+                await submit_withdraw(int(withdraw_id))
 
-    logger.info(f'admin {user_id} success submit all withdraws')
+        logger.info(f'admin {user_id} success submit all withdraws')
 
-    state = dp.current_state(user=user_id)
-    await state.reset_state()
+        state = dp.current_state(user=user_id)
+        await state.reset_state()
 
-    await c.message.edit_text(ADMIN_WITHDRAW_FUNDS_SUCCESS)
+        await c.message.edit_text(ADMIN_WITHDRAW_FUNDS_SUCCESS)
+
+    except Exception as e:
+        logger.error(f'{user_id} got ex: {e}')
+        await bot.send_message(user_id, 'Произошла ошибка, нажмите кнопку "Отмена"',
+                               reply_markup=cancel_menu)
 
 
 @dp.callback_query_handler(lambda c: c.data == 'chb')
@@ -1236,10 +1288,10 @@ async def change_balance_button(c: types.CallbackQuery):
     logger = logging.getLogger(f'{get_logger_name_main()}.{change_balance_button.__name__}')
     logger.info(f'admin {c.from_user.id} change wanna balance some user')
 
-    await c.message.edit_text(SEND_USER_FOR_CHANGE_BALANCE)
     state = dp.current_state(user=c.from_user.id)
-    await state.set_state('GET_USER_FOR_CHB')
+    await state.set_state('ADMIN_CHANGE_BALANCE')
 
+    await c.message.edit_text(SEND_USER_FOR_CHANGE_BALANCE)
 
 # админская функция выгруза всех данных из базы
 @dp.callback_query_handler(lambda c: c.data == 'admin_get_db_data')
