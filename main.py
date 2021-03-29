@@ -165,7 +165,7 @@ async def command_start(m: types.Message):
             else:
                 await add_user(user_id, username)
 
-                logger.info(f'user {str(argument)} default registered')
+                logger.info(f'user {user_id} default registered')
 
                 await m.reply(START, reply=False, parse_mode='HTML', reply_markup=main_menu)
 
@@ -1077,7 +1077,7 @@ async def skip_clip(c: types.CallbackQuery):
 
         logger.info(f'user {user_id} start timer to return clip to queue {clip_id} for 1800 sec')
         # таймер на 30 минут для появления видоса в списке на продвижение
-        return_clip_in_queue_success = asyncio.create_task(return_clip_int_queue(user_id, clip_id, 3))
+        return_clip_in_queue_success = asyncio.create_task(return_clip_int_queue(user_id, clip_id, 1800))
         if await return_clip_in_queue_success:
             # отправит сообщение о появлении нового клипа
             await bot.send_message(user_id, NEW_CLIP_TO_PROMO)
