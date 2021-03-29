@@ -1,11 +1,8 @@
 import asyncio
-import sqlite3
 from sys import platform
 
 import asyncpg
 from sshtunnel import SSHTunnelForwarder
-
-import functional.paths as paths
 
 
 class DbConnect:
@@ -13,15 +10,7 @@ class DbConnect:
         self.os = platform
         self.connect = None
 
-    async def get_connect(self):
-        if not self.connect:
-            # получаем коннект к базе через текущий луп (т.к. файл запускается первым, то луп создается тута)
-            self.connect = asyncio.get_event_loop().run_until_complete(self._get_pg_tt_connect())
-
-        print(self.connect)
-        return self.connect
-
-    async def _get_pg_tt_connect(self):
+    async def get_pg_tt_connect(self):
         # проверяем ось, с которой запускается бот
         if self.os.startswith('linux'):
             # траим локальный коннект, т.к. база на серваке лежит
@@ -52,7 +41,8 @@ class DbConnect:
                 ('135.181.251.7', 22),
                 ssh_username='squalordf',
                 ssh_password='149367139Diez',
-                remote_bind_address=('localhost', 5432))
+                remote_bind_address=('localhost', 5432)
+            )
 
             server.start()
             print('server connected')
@@ -77,7 +67,7 @@ class DbConnect:
             return con
 
         except:
-            print('connected failed')
+            print('connect failed')
 
     async def __get_pg_local_connect(self):
         params = {
@@ -95,11 +85,14 @@ class DbConnect:
 
         return con
 
-    def get_sqlite_tt_connect(self):
-        sqlite3.connect(paths.get_tt_db_path())
+    # метод для теста асинк коннекта из других мест
+    async def get_connect(self):
+        if not self.connect:
+            # получаем коннект к базе через текущий луп (т.к. файл запускается первым, то луп создается тута)
+            self.connect = asyncio.get_event_loop().run_until_complete(self.get_pg_tt_connect())
 
-    def get_sqlite_old_connect(self):
-        sqlite3.connect(paths.get_old_db_path())
+        print(self.connect)
+        return self.connect
 
 
-conn = asyncio.get_event_loop().run_until_complete(DbConnect()._get_pg_tt_connect())
+conn = asyncio.get_event_loop().run_until_complete(DbConnect().get_pg_tt_connect())

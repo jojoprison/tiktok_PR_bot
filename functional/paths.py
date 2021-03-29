@@ -1,8 +1,6 @@
 import pathlib
 
 PROJECT_NAME = 'SubVPbot'
-DB_DIRECTORY = 'db'
-DB_NAME = 'ttdb.db'
 
 
 def get_project_path():
@@ -16,20 +14,3 @@ def get_project_path():
             break
 
     return project_path
-
-
-def get_tt_db_path():
-    project_path = get_project_path()
-
-    db_path = pathlib.Path(project_path, DB_DIRECTORY, DB_NAME)
-
-    return db_path
-
-
-def get_old_db_path():
-    project_path = get_project_path()
-
-    db_path = pathlib.Path(project_path, DB_DIRECTORY, 'data.db')
-
-    return db_path
-
