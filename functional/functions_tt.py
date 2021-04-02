@@ -1,6 +1,8 @@
+import asyncio
 import datetime
 import urllib.parse as url_parser
 
+import pytz
 import requests
 from TikTokApi import TikTokApi
 from bs4 import BeautifulSoup
@@ -390,7 +392,8 @@ async def check_clip_for_paying(user_id, video_id):
 
 
 def get_music_id_from_clip_tt(short_clip_url):
-    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP)
+    tt_api = TikTokApi.get_instance(use_test_endpoints=True, custom_verifyFp=TT_VERIFY_FP,
+                                    use_selenium=True)
 
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
@@ -401,9 +404,13 @@ def get_music_id_from_clip_tt(short_clip_url):
 
     full_clip_url_converted = url_parser.urlparse(full_clip_url).path
     clip_id = get_clip_id_from_url(full_clip_url_converted)
+    print(type(clip_id))
 
-    clip_tt = tt_api.getTikTokById(clip_id)
-    # clip_tt = tt_api.getTikTokByUrl(full_clip_url_converted)
+    print(tt_api.get_music_object('6852257886387570689'))
+    # print(tt_api.get_user('squalordf'))
+
+    clip_tt = tt_api.get_tiktok_by_id('6942393058508000513')
+    # clip_tt = tt_api.get_video_by_url(short_clip_url)
     music_id = clip_tt.get('itemInfo').get('itemStruct').get('music').get('id')
 
     clip_data = {'clip_id': clip_id, 'music_id': music_id}
@@ -713,3 +720,11 @@ def ban_user(user_id, decision):
             return 'Пользователь был успешно добавлен в черный список.'
         else:
             return 'Пользователь уже добавлен в черный список или произошла непредвиденная ошибка.'
+
+
+async def update_telegram_username(user_id, username):
+    async with conn.transaction():
+        await conn.execute('UPDATE users SET username = $2 WHERE telegram_id = $1',
+                           user_id, username)
+
+    return True

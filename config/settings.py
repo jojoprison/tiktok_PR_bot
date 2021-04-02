@@ -15,7 +15,7 @@ CLIP_PAYMENT = 9
 REF_BONUS = 1
 
 # TODO куки для тиктока (обновлять) / обновляется редко
-TT_VERIFY_FP = 'verify_klv5c5xg_nEikqRKz_up6a_4o0n_Bzh2_qD4CuJUGbEDh'
+TT_VERIFY_FP = 'verify_kn0k4uz8_43UmJVCV_HMR6_4yWM_AmH5_6GKMtd6aOY1D'
 
 LOG_CONFIG_DICT = {
         'version': 1,
