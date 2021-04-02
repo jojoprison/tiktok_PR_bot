@@ -204,12 +204,14 @@ async def command_not_admin(m: types.Message):
 
 @dp.message_handler(lambda m: m.text == '👤 Профиль', state='*')
 async def profile_button_handle(m: types.Message):
-    state = dp.current_state(user=m.from_user.id)
+    user_id = m.from_user.id
+
+    state = dp.current_state(user=user_id)
     await state.reset_state()
 
     # обновляем username пользователя в базе
     username = m.from_user.username
-
+    await update_telegram_username(user_id, username)
 
     balance_manipulations = InlineKeyboardMarkup()
     balance_manipulations.add(
@@ -241,12 +243,12 @@ async def tt_video_handle(m: types.Message):
                 logger.info(f'user {user_id} wanna add {clip_link}')
 
                 # TODO заглушка
-                # tt_clip_data = get_music_id_from_clip_tt(clip_link)
-                # tt_clip_id = clip_data.get('clip_id')
-                # tt_music_id = clip_data.get('music_id')
+                clip_data = get_music_id_from_clip_tt(clip_link)
+                tt_clip_id = clip_data.get('clip_id')
+                tt_music_id = clip_data.get('music_id')
 
-                tt_clip_id = 1
-                tt_music_id = 2
+                # tt_clip_id = 1
+                # tt_music_id = 2
 
                 # TODO сохранять видос/линк на него в БД
                 order_id = await save_tt_clip(client=user_id, clip_link=clip_link,
@@ -292,6 +294,7 @@ async def tt_video_handle(m: types.Message):
 
     except Exception as e:
         logger.error(f'{user_id} got ex: {e}')
+        print(e)
         await m.reply('Произошла ошибка, нажмите кнопку "Отмена"', reply_markup=cancel_menu)
 
 

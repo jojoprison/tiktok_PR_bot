@@ -36,3 +36,328 @@
 2021-03-27 08:00:47 :z - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 92957440
 2021-03-27 08:00:52 :z - bot.main.check_clip - INFO - user 92957440 update tables for paying
 2021-03-27 08:00:53 :z - bot.main.check_clip - INFO - user 92957440 gey paying
+2021-03-29 15:08:58 - bot.main.command_start - INFO - user  default registered
+2021-03-29 17:02:32 - bot.main.command_start - INFO - user  default registered
+2021-03-29 17:03:33 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@lucas.kth/video/6944762155795320070?is_copy_url=1&is_from_webapp=v2
+2021-03-29 17:03:33 - bot.main.tt_video_handle - INFO - clip added https://www.tiktok.com/@lucas.kth/video/6944762155795320070?is_copy_url=1&is_from_webapp=v2
+2021-03-29 17:03:35 - bot.main.send_clip_count - INFO - 92957440 not enough balance to PR clip
+2021-03-29 17:03:47 - bot.main.cancel_button_with_id - INFO - 92957440 delete order_clip_id 137 from db
+2021-03-29 17:03:47 - bot.main.cancel_button_with_id - INFO - 92957440 clip deleted: 137
+2021-03-29 17:03:50 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@lucas.kth/video/6944762155795320070?is_copy_url=1&is_from_webapp=v2
+2021-03-29 17:03:50 - bot.main.tt_video_handle - INFO - clip added https://www.tiktok.com/@lucas.kth/video/6944762155795320070?is_copy_url=1&is_from_webapp=v2
+2021-03-29 17:03:51 - bot.main.send_clip_count - INFO - 92957440 sent valid clip_count
+2021-03-29 17:03:51 - bot.main.send_clip_count - INFO - 92957440 update clip_order_goal 1
+2021-03-29 17:03:51 - bot.main.send_clip_count - INFO - 92957440 clip_order_goal in clip 138 updated 1
+2021-03-29 17:03:53 - bot.main.confirm_clip_promo - INFO - user 92957440 try to confirm order 138
+2021-03-29 17:03:53 - bot.main.confirm_clip_promo - INFO - user 92957440 confirm order 138 success
+2021-03-29 17:03:56 - bot.main.get_money - INFO - user 92957440 dont have tiktok_username name in db
+2021-03-29 17:04:03 - bot.main.confirm_clip_promo - ERROR - 1552800576 got ex: Forbidden: user is deactivated
+2021-03-29 17:04:05 - bot.main.tt_username_connect - INFO - user 92957440 try to connect tiktok account link to db
+2021-03-29 17:04:05 - bot.main.tt_username_connect - INFO - 92957440 parse tiktok account link: https://www.tiktok.com/@squalordf?is_copy_url=1&is_from_webapp=v2&lang=ru-RU
+2021-03-29 17:04:06 - bot.main.tt_username_connect - INFO - 92957440 save tiktok account link to db: https://www.tiktok.com/@squalordf?is_copy_url=1&is_from_webapp=v2&lang=ru-RU
+2021-03-29 17:04:07 - bot.main.tt_username_connect - INFO - 92957440 connect tt account link with db https://www.tiktok.com/@squalordf?is_copy_url=1&is_from_webapp=v2&lang=ru-RU
+2021-03-29 17:04:07 - bot.main.tt_username_connect - ERROR - 92957440 got ex: Message to delete not found
+2021-03-29 17:04:12 - bot.main.tt_username_connect - INFO - user 92957440 try to connect tiktok account link to db
+2021-03-29 17:04:12 - bot.main.tt_username_connect - INFO - 92957440 parse tiktok account link: https://www.tiktok.com/@squalordf?is_copy_url=1&is_from_webapp=v2&lang=ru-RU
+2021-03-29 17:04:13 - bot.main.tt_username_connect - INFO - 92957440 save tiktok account link to db: https://www.tiktok.com/@squalordf?is_copy_url=1&is_from_webapp=v2&lang=ru-RU
+2021-03-29 17:04:13 - bot.main.tt_username_connect - INFO - 92957440 connect tt account link with db https://www.tiktok.com/@squalordf?is_copy_url=1&is_from_webapp=v2&lang=ru-RU
+2021-03-29 17:04:23 - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-29 17:04:23 - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-29 17:04:23 - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-29 17:04:44 - bot.main.get_money - INFO - user 450914065 get clips for work
+2021-03-29 17:04:45 - bot.main.get_money - INFO - user 450914065 got clips for work
+2021-03-29 17:04:45 - bot.main.get_money - INFO - user 450914065 got clips and exist to work /
+2021-03-29 17:04:46 - bot.main.check_clip - INFO - check_clip user"s 92957440 for paying 120
+2021-03-29 17:04:46 - bot.main.check_clip - INFO - user"s clip_order 120 success paying added 120
+2021-03-29 17:04:46 - bot.main.check_clip - INFO - user 92957440 paying tasks async
+2021-03-29 17:07:16 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 92957440
+2021-03-29 17:07:16 - bot.main.check_clip - INFO - user 92957440 update tables for paying
+2021-03-29 17:07:17 - bot.main.check_clip - INFO - user 92957440 get paying
+2021-03-29 17:07:17 - bot.main.check_clip - INFO - user 92957440 pay by referral
+2021-03-29 18:05:18 - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-29 18:05:19 - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-29 18:05:19 - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-29 18:05:24 - bot.main.skip_clip - INFO - user 92957440 try to skip clip 67
+2021-03-29 18:05:24 - bot.main.skip_clip - INFO - user 92957440 add clip to skipped 67
+2021-03-29 18:05:24 - bot.main.skip_clip - INFO - user 92957440 get awailable clips
+2021-03-29 18:05:24 - bot.main.skip_clip - INFO - user 92957440 clips to work exist
+2021-03-29 18:05:24 - bot.main.skip_clip - INFO - user 92957440 start timer to return clip to queue 67 for 1800 sec
+2021-03-29 18:05:27 - bot.main.return_clip_int_queue - INFO - Wait for clip in queue for : 3, clip_id = 67
+2021-03-29 18:05:55 - bot.main.skip_clip - INFO - user 92957440 try to skip clip 31
+2021-03-29 18:05:55 - bot.main.skip_clip - INFO - user 92957440 add clip to skipped 31
+2021-03-29 18:05:55 - bot.main.skip_clip - INFO - user 92957440 get awailable clips
+2021-03-29 18:05:56 - bot.main.skip_clip - INFO - user 92957440 clips to work exist
+2021-03-29 18:05:56 - bot.main.skip_clip - INFO - user 92957440 start timer to return clip to queue 31 for 1800 sec
+2021-03-29 18:05:59 - bot.main.return_clip_int_queue - INFO - Wait for clip in queue for : 3, clip_id = 31
+2021-03-29 18:09:28 - bot.main.command_start - INFO - user 1019059473 default registered
+2021-03-29 18:09:39 - bot.main.get_money - INFO - user 1019059473 dont have tiktok_username name in db
+2021-03-29 18:11:07 - bot.main.command_start - INFO - user 1388288295 default registered
+2021-03-29 18:11:15 - bot.main.tt_video_handle - INFO - user 1388288295 FALL with adding clip Канал с выплатами
+2021-03-29 18:11:19 - bot.main.tt_video_handle - INFO - user 1388288295 FALL with adding clip Канал с выплатами
+2021-03-29 18:11:32 - bot.main.tt_video_handle - INFO - user 1388288295 FALL with adding clip /help
+2021-03-29 18:12:15 - bot.main.get_money - INFO - user 1388288295 dont have tiktok_username name in db
+2021-03-29 18:14:31 - bot.main.admin_stat_button - INFO - admin 450914065 get stat
+2021-03-29 18:15:55 - bot.main.get_unverified_tasks - INFO - admin 450914065 try to admin_withdraw
+2021-03-29 18:15:55 - bot.main.get_unverified_tasks - INFO - admin 450914065 get first unverified withdraw funds
+2021-03-29 18:15:55 - bot.main.get_unverified_tasks - INFO - admin 450914065 withdraw funds list is empty
+2021-03-29 18:17:38 - bot.main.tt_username_connect - INFO - user 1388288295 try to connect tiktok account link to db
+2021-03-29 18:17:38 - bot.main.tt_username_connect - INFO - 1388288295 parse tiktok account link: https://vm.tiktok.com/ZSJjMPK6x/
+2021-03-29 18:17:41 - bot.main.tt_username_connect - INFO - 1388288295 save tiktok account link to db: https://vm.tiktok.com/ZSJjMPK6x/
+2021-03-29 18:17:41 - bot.main.tt_username_connect - INFO - 1388288295 connect tt account link with db https://vm.tiktok.com/ZSJjMPK6x/
+2021-03-29 18:17:41 - bot.main.tt_username_connect - ERROR - 1388288295 got ex: Message to delete not found
+2021-03-29 18:17:53 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:17:53 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:17:53 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:19:41 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 67
+2021-03-29 18:19:42 - bot.main.check_clip - INFO - user"s clip_order 67 success paying added 67
+2021-03-29 18:19:42 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:21:33 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:21:33 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:21:33 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:21:34 - bot.main.command_start - INFO - try to reg user 935234869 by referral 450914065
+2021-03-29 18:21:35 - bot.main.command_start - INFO - user 935234869 registered with by referral 450914065
+2021-03-29 18:21:43 - bot.main.get_money - INFO - user 935234869 dont have tiktok_username name in db
+2021-03-29 18:22:12 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:22:12 - bot.main.check_clip - INFO - user 1388288295 update tables for paying
+2021-03-29 18:22:13 - bot.main.check_clip - INFO - user 1388288295 get paying
+2021-03-29 18:22:13 - bot.main.check_clip - INFO - user 1388288295 pay by referral
+2021-03-29 18:23:37 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 67
+2021-03-29 18:23:37 - bot.main.check_clip - INFO - user"s clip_order 67 success paying added 67
+2021-03-29 18:23:37 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:23:50 - bot.main.withdraw_funds - INFO - user 1388288295 wanna withdraw_funds
+2021-03-29 18:23:55 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:23:55 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:23:55 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:23:56 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 42
+2021-03-29 18:23:57 - bot.main.check_clip - INFO - user"s clip_order 42 success paying added 42
+2021-03-29 18:23:57 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:23:59 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:23:59 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:23:59 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:24:57 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 34
+2021-03-29 18:24:57 - bot.main.check_clip - INFO - user"s clip_order 34 success paying added 34
+2021-03-29 18:24:57 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:25:00 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:25:00 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:25:00 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:26:07 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:26:07 - bot.main.check_clip - INFO - user 1388288295 update tables for paying
+2021-03-29 18:26:08 - bot.main.check_clip - INFO - user 1388288295 get paying
+2021-03-29 18:26:27 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:26:46 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 31
+2021-03-29 18:26:47 - bot.main.check_clip - INFO - user"s clip_order 31 success paying added 31
+2021-03-29 18:26:47 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:27:08 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:27:08 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:27:08 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:27:27 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:27:28 - bot.main.check_clip - INFO - user 1388288295 update tables for paying
+2021-03-29 18:27:29 - bot.main.check_clip - INFO - user 1388288295 get paying
+2021-03-29 18:28:55 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:28:55 - bot.main.check_clip - INFO - user"s clip_order 120 success paying added 120
+2021-03-29 18:28:55 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:29:17 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:29:17 - bot.main.check_clip - INFO - user 1388288295 update tables for paying
+2021-03-29 18:29:17 - bot.main.check_clip - INFO - user 1388288295 get paying
+2021-03-29 18:29:36 - bot.main.tt_video_handle - INFO - user 1388288295 wanna add https://vm.tiktok.com/ZSJjMFjKf/
+2021-03-29 18:29:36 - bot.main.tt_video_handle - INFO - clip added https://vm.tiktok.com/ZSJjMFjKf/
+2021-03-29 18:29:53 - bot.main.cancel_button_with_id - INFO - 1388288295 delete order_clip_id 139 from db
+2021-03-29 18:29:54 - bot.main.cancel_button_with_id - INFO - 1388288295 clip deleted: 139
+2021-03-29 18:30:00 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:30:00 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:30:00 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:30:09 - bot.main.withdraw_funds - INFO - user 1388288295 wanna withdraw_funds
+2021-03-29 18:30:20 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:30:20 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:30:20 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:31:25 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:31:33 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 114
+2021-03-29 18:31:33 - bot.main.check_clip - INFO - user"s clip_order 114 success paying added 114
+2021-03-29 18:31:33 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:31:35 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:31:36 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:31:36 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:32:17 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 33
+2021-03-29 18:32:17 - bot.main.check_clip - INFO - user"s clip_order 33 success paying added 33
+2021-03-29 18:32:17 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:32:27 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:32:27 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:32:27 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:32:29 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 136
+2021-03-29 18:32:29 - bot.main.check_clip - INFO - user"s clip_order 136 success paying added 136
+2021-03-29 18:32:29 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:32:30 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:32:30 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:32:30 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:33:26 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 136
+2021-03-29 18:33:26 - bot.main.check_clip - INFO - user"s clip_order 136 success paying added 136
+2021-03-29 18:33:26 - bot.main.check_clip - INFO - user 1388288295 paying tasks async
+2021-03-29 18:33:28 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:33:28 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:33:28 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:34:03 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:34:04 - bot.main.check_clip - INFO - user 1388288295 update tables for paying
+2021-03-29 18:34:04 - bot.main.check_clip - INFO - user 1388288295 get paying
+2021-03-29 18:34:09 - bot.main.command_start - INFO - user 157811614 default registered
+2021-03-29 18:34:22 - bot.main.get_money - INFO - user 157811614 dont have tiktok_username name in db
+2021-03-29 18:34:47 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:34:54 - bot.main.tt_username_connect - INFO - user 157811614 try to connect tiktok account link to db
+2021-03-29 18:34:54 - bot.main.tt_username_connect - INFO - 157811614 parse tiktok account link: https://vm.tiktok.com/ZSJjMuVuT/
+2021-03-29 18:34:57 - bot.main.tt_username_connect - INFO - 157811614 save tiktok account link to db: https://vm.tiktok.com/ZSJjMuVuT/
+2021-03-29 18:34:57 - bot.main.tt_username_connect - INFO - 157811614 connect tt account link with db https://vm.tiktok.com/ZSJjMuVuT/
+2021-03-29 18:34:59 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:35:56 - bot.main.pay_user_for_tasks - INFO - Paying completed tasks for user: 1388288295
+2021-03-29 18:35:56 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 32
+2021-03-29 18:35:56 - bot.main.check_clip - ERROR - 1388288295 got ex: cannot perform operation: another operation is in progress
+2021-03-29 18:35:57 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 32
+2021-03-29 18:35:57 - bot.main.check_clip - ERROR - 1388288295 got ex: cannot perform operation: another operation is in progress
+2021-03-29 18:35:57 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 32
+2021-03-29 18:35:57 - bot.main.check_clip - ERROR - 1388288295 got ex: cannot perform operation: another operation is in progress
+2021-03-29 18:35:57 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:36:03 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 32
+2021-03-29 18:36:03 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:36:08 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:36:08 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:36:08 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:37:05 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 33
+2021-03-29 18:37:05 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:37:07 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 33
+2021-03-29 18:37:07 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:37:11 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 33
+2021-03-29 18:37:11 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:37:14 - bot.main.skip_clip - INFO - user 1388288295 try to skip clip 33
+2021-03-29 18:37:14 - bot.main.skip_clip - INFO - user 1388288295 add clip to skipped 33
+2021-03-29 18:37:15 - bot.main.skip_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:37:22 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 33
+2021-03-29 18:37:22 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:37:33 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:37:33 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:37:33 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:38:16 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:38:16 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:38:18 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:38:18 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:38:21 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:38:21 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:38:24 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:38:24 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:40:38 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:40:38 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:40:39 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:40:39 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:40:39 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:40:39 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:40:39 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:40:40 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:40:40 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:40:40 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:41:01 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:41:01 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:41:05 - bot.main.skip_clip - INFO - user 1388288295 try to skip clip 120
+2021-03-29 18:41:05 - bot.main.skip_clip - INFO - user 1388288295 add clip to skipped 120
+2021-03-29 18:41:05 - bot.main.skip_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:41:13 - bot.main.tt_video_handle - INFO - user 1388288295 FALL with adding clip Партнёрская программа
+2021-03-29 18:41:16 - bot.main.tt_video_handle - INFO - user 1388288295 FALL with adding clip Заработать
+2021-03-29 18:41:20 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:41:20 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:41:20 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:41:22 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 32
+2021-03-29 18:41:22 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:41:32 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 32
+2021-03-29 18:41:32 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:41:35 - bot.main.get_money - INFO - user 1388288295 get clips for work
+2021-03-29 18:41:35 - bot.main.get_money - INFO - user 1388288295 got clips for work
+2021-03-29 18:41:35 - bot.main.get_money - INFO - user 1388288295 got clips and exist to work /
+2021-03-29 18:41:37 - bot.main.skip_clip - INFO - user 1388288295 try to skip clip 120
+2021-03-29 18:41:37 - bot.main.skip_clip - INFO - user 1388288295 add clip to skipped 120
+2021-03-29 18:41:37 - bot.main.skip_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:41:41 - bot.main.tt_video_handle - INFO - user 1388288295 FALL with adding clip Партнёрская программа
+2021-03-29 18:41:42 - bot.main.tt_video_handle - INFO - user 1388288295 FALL with adding clip Канал с выплатами
+2021-03-29 18:41:49 - bot.main.check_clip - INFO - check_clip user"s 1388288295 for paying 120
+2021-03-29 18:41:49 - bot.main.check_clip - ERROR - 1388288295 got ex: SAVEPOINT can only be used in transaction blocks
+2021-03-29 18:59:47 - bot.main.tt_video_handle - INFO - user 450914065 FALL with adding clip Партнёрская программа
+2021-03-29 18:59:47 - bot.main.tt_video_handle - INFO - user 450914065 FALL with adding clip Канал с выплатами
+2021-03-29 18:59:47 - bot.main.tt_video_handle - INFO - user 855235999 FALL with adding clip Заработать
+2021-03-30 08:06:20 - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-03-30 08:06:20 - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-03-30 08:06:20 - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-03-30 08:06:33 - bot.main.check_clip - INFO - check_clip user"s 92957440 for paying 67
+2021-03-30 08:06:34 - bot.main.check_clip - ERROR - 92957440 got ex: It looks like you are using Playwright Sync API inside the asyncio loop.
+Please use the Async API instead.
+2021-04-02 15:45:07 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 15:45:11 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 15:45:47 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 15:45:47 - bot.main.tt_video_handle - ERROR - 92957440 got ex: It looks like you are using Playwright Sync API inside the asyncio loop.
+Please use the Async API instead.
+2021-04-02 15:47:39 - bot.main.get_money - INFO - user 92957440 get clips for work
+2021-04-02 15:47:39 - bot.main.get_money - INFO - user 92957440 got clips for work
+2021-04-02 15:47:39 - bot.main.get_money - INFO - user 92957440 got clips and exist to work /
+2021-04-02 15:47:49 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 15:47:49 - bot.main.tt_video_handle - ERROR - 92957440 got ex: It looks like you are using Playwright Sync API inside the asyncio loop.
+Please use the Async API instead.
+2021-04-02 15:48:39 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 15:48:42 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 16:01:18 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 16:01:21 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 16:05:11 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 16:05:14 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 16:53:30 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 16:53:33 - bot.main.tt_video_handle - ERROR - 92957440 got ex: 'hasMore'
+2021-04-02 16:54:49 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 16:54:51 - bot.main.tt_video_handle - ERROR - 92957440 got ex: 'hasMore'
+2021-04-02 16:56:46 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 16:56:49 - bot.main.tt_video_handle - ERROR - 92957440 got ex: 'hasMore'
+2021-04-02 17:12:58 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:13:01 - bot.main.tt_video_handle - ERROR - 92957440 got ex: 'hasMore'
+2021-04-02 17:43:12 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:43:18 - bot.main.tt_video_handle - ERROR - 92957440 got ex: 'hasMore'
+2021-04-02 17:43:44 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:43:46 - bot.main.tt_video_handle - ERROR - 92957440 got ex: 'hasMore'
+2021-04-02 17:44:54 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:44:54 - bot.main.tt_video_handle - ERROR - 92957440 got ex: It looks like you are using Playwright Sync API inside the asyncio loop.
+Please use the Async API instead.
+2021-04-02 17:47:02 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:47:02 - bot.main.tt_video_handle - ERROR - 92957440 got ex: It looks like you are using Playwright Sync API inside the asyncio loop.
+Please use the Async API instead.
+2021-04-02 17:47:25 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:47:36 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 17:48:18 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:48:21 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 17:48:47 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:48:50 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 17:51:05 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:51:07 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 17:52:21 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:52:23 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 17:53:16 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:53:18 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 17:53:46 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:53:48 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 17:54:30 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:54:33 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 17:57:14 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 17:57:19 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 18:02:36 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:02:41 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 18:03:46 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:03:53 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 18:11:53 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:11:55 - bot.main.tt_video_handle - ERROR - 92957440 got ex: Proxy URL had no scheme, should start with http:// or https://
+2021-04-02 18:13:37 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:13:44 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 18:15:44 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:15:51 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok blocks this request displaying a Captcha 
+Tip: Consider using a proxy or a custom_verifyFp as method parameters
+2021-04-02 18:17:15 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:17:25 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok blocks this request displaying a Captcha 
+Tip: Consider using a proxy or a custom_verifyFp as method parameters
+2021-04-02 18:17:50 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:17:58 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 18:22:04 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:22:12 - bot.main.tt_video_handle - ERROR - 92957440 got ex: 'maxCursor'
+2021-04-02 18:23:42 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:23:49 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 18:27:07 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:27:15 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
+2021-04-02 18:29:18 - bot.main.tt_video_handle - INFO - user 92957440 wanna add https://www.tiktok.com/@jujuuking_/video/6945786802259201286?is_copy_url=1&is_from_webapp=v2
+2021-04-02 18:29:21 - bot.main.tt_video_handle - ERROR - 92957440 got ex: TikTok sent invalid JSON back
