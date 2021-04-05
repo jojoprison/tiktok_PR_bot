@@ -1,13 +1,10 @@
-import asyncio
 import datetime
-import random
-import string
 import urllib.parse as url_parser
 
-import pytz
 import requests
 from TikTokApi import TikTokApi
 from bs4 import BeautifulSoup
+from webdriver_manager.chrome import ChromeDriverManager
 
 from config.settings import *
 from db.db_connect import conn
@@ -16,7 +13,6 @@ from db.db_connect import conn
 async def save_tt_clip(**data):
     client_id = data['client']
     music_link = data['music_link']
-    clip_id = data['clip_id']
     music_id = data['music_id']
 
     if 'goal' in data:
@@ -27,9 +23,9 @@ async def save_tt_clip(**data):
     # TODO подумать как по другому проверять параметры на валидность
     if client_id:
         async with conn.transaction():
-            await conn.execute('INSERT INTO clips(client, tt_music_link, tt_clip_id, tt_music_id, '
-                               'goal, status, abusers, date) VALUES($1, $2, $3, $4, $5, $6, $7, $8)',
-                               client_id, music_link, clip_id, music_id, goal, 2,
+            await conn.execute('INSERT INTO clips(client, tt_music_link, tt_music_id, '
+                               'goal, status, abusers, date) VALUES($1, $2, $3, $4, $5, $6, $7)',
+                               client_id, music_link, music_id, goal, 2,
                                str({}), datetime.datetime.now())
 
         order_id = await conn.fetchval('SELECT MAX(order_id) FROM clips')
@@ -103,7 +99,7 @@ async def get_skipped_videos(user_id):
 # TODO переписать под asyncpg
 async def edit_promo_status(number, status):
     cur = conn.cursor()
-    sql = cur.execute('''SELECT COUNT(order_id), tt_clip_id, client, goal, status, abusers
+    sql = cur.execute('''SELECT COUNT(order_id), client, goal, status, abusers
                         FROM clips WHERE order_id = ?''', (number,))
 
     sql_fetchall = sql.fetchall()
@@ -112,20 +108,19 @@ async def edit_promo_status(number, status):
     print(sql_fetchall[0][2])
     print(sql_fetchall[0][3])
     print(sql_fetchall[0][4])
-    print(sql_fetchall[0][5])
 
     if sql_fetchall[0][0] == 1 and status == 0:
         cur.execute('''UPDATE clips SET status = ? WHERE order_id = ?''', (status, number,))
 
         # TODO непонятно, меняет баланс в случае если бот в канале не админ
-        delta = len(eval(sql_fetchall[0][5])) - sql_fetchall[0][3]
+        delta = len(eval(sql_fetchall[0][4])) - sql_fetchall[0][3]
         print(delta)
         delta = abs(delta) * 0.5
         print(delta)
         delta = round(delta, 0)
         print(delta)
 
-        client_id = sql_fetchall[0][2]
+        client_id = sql_fetchall[0][1]
         cur.execute('''UPDATE users SET balance = balance + ? WHERE telegram_id = ?''', (delta, client_id,))
         conn.commit()
 
@@ -362,7 +357,8 @@ async def check_clip_recorded(user_id, order_id):
     tt_username = tt_username.replace(' ', '')
 
     # tt_api = asyncio.get_event_loop().run_in_executor(TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP))
-    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True)
+    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
+                                    executablePath=ChromeDriverManager().install())
 
     tt_data = tt_api.get_user(tt_username)
     # print(tt_data)
@@ -425,8 +421,8 @@ async def get_music_id_from_order(order_id):
 
 
 async def get_music_id_from_url(short_clip_url):
-    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP,
-                                    use_selenium=True)
+    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
+                                    executablePath=ChromeDriverManager().install())
 
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",

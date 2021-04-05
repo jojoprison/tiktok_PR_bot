@@ -275,8 +275,7 @@ async def tt_video_handle(m: types.Message):
                 music_id = await get_music_id_from_url(music_link)
 
                 # TODO сохранять видос/линк на него в БД
-                order_id = await save_tt_clip(client=user_id, music_link=music_link,
-                                              clip_id=0, music_id=music_id)
+                order_id = await save_tt_clip(client=user_id, music_link=music_link, music_id=music_id)
 
                 logger.info(f'clip added {music_link}')
 

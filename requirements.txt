@@ -1,8 +1,9 @@
 asyncpg~=0.22.0
-aiogram~=2.11.2
+aiogram~=2.12.1
 requests~=2.25.1
 TikTokApi~=3.9.1
 beautifulsoup4~=4.9.3
 sshtunnel~=0.4.0
 pandas~=1.2.3
 openpyxl~=3.0.7
+webdriver-manager>=3.3.0
