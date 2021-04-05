@@ -1,10 +1,12 @@
 from TikTokApi import TikTokApi
+from webdriver_manager.chrome import ChromeDriverManager
 
 from config.settings import TT_VERIFY_FP
 
 s_v_web_id = 'verify_klv5c5xg_nEikqRKz_up6a_4o0n_Bzh2_qD4CuJUGbEDh'
 
-tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP)
+tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
+                                executablePath=ChromeDriverManager().install())
 
 url = 'https://vm.tiktok.com/ZSKfUvw8/'
 headers = {
@@ -12,10 +14,27 @@ headers = {
     "accept": "*/*"}
 
 
-diz = tt_api.byUsername('squalordf')
-print(tt_api.search_for_music('ViolA - телепортируюсь', 1))
+tt_data = tt_api.get_user('ugadai5')
 
-print(tt_api.bySound('6889603433188296706', 1))
+tt_clips = tt_data.get('items')
+print(tt_clips[1].get('music'))
+# print(tt_clips[0].get('music').get('id'))
+
+# clips_to_check = list()
+# for i in range(0, 5):
+#     clip_music_id = tt_clips[i].get('music').get('id')
+#     if clip_music_id == '6914613529681185537':
+#         clips_to_check.append(tt_clips[i])
+#
+# print(len(clips_to_check))
+#
+# for clip in clips_to_check:
+#     item_id = clip.get('id')
+#     print(item_id)
+
+# print(tt_api.search_for_music('ViolA - телепортируюсь', 1))
+
+# print(tt_api.by_sound('6914613529681185537'))
 
 # diz = api.getUser('squalordf')
 # print(api.getUser('ugadai5'))

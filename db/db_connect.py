@@ -14,10 +14,10 @@ class DbConnect:
         # проверяем ось, с которой запускается бот
         if self.os.startswith('linux'):
             # траим локальный коннект, т.к. база на серваке лежит
-            get_conn_task = asyncio.create_task(self.__get_pg_local_connect())
+            get_conn_task = asyncio.create_task(self._get_pg_local_connect())
         elif self.os == 'win32':
             # траим коннект через ssh шлюз (ШЛЮХ)))
-            get_conn_task = asyncio.create_task(self.__get_pg_remote_connect())
+            get_conn_task = asyncio.create_task(self._get_pg_remote_connect())
         else:
             # если ось не винда и не линух
             raise OSError
@@ -34,7 +34,7 @@ class DbConnect:
         except asyncpg.PostgresError as postgres_error:
             return postgres_error
 
-    async def __get_pg_remote_connect(self):
+    async def _get_pg_remote_connect(self):
         try:
             # придумать где закрывать шлюз к серваку
             server = SSHTunnelForwarder(
@@ -69,7 +69,7 @@ class DbConnect:
         except:
             print('connect failed')
 
-    async def __get_pg_local_connect(self):
+    async def _get_pg_local_connect(self):
         params = {
             'database': 'tiktok_bot',
             'user': 'postgres',
@@ -95,4 +95,25 @@ class DbConnect:
         return self.connect
 
 
-conn = asyncio.get_event_loop().run_until_complete(DbConnect().get_pg_tt_connect())
+# меняем токен бота в зависимости от нужды, вводим через консоль число
+console_input = input('enter DB location: 0 - local, 1 - pub (FOR DEBUG)\n')
+
+# флаг цикла корректности введенного числа
+location_invalid = True
+location_chooser = None
+
+while location_invalid:
+    try:
+        location_chooser = int(console_input)
+        location_invalid = False
+    except Exception as e:
+        print(e)
+        print('invalid location number, enter valid location number')
+
+if location_chooser == 0:
+    # получаем коннект к базе, передаем переменную в другие методы
+    conn = asyncio.get_event_loop().run_until_complete(DbConnect()._get_pg_local_connect())
+    print('DEV DB location')
+else:
+    conn = asyncio.get_event_loop().run_until_complete(DbConnect().get_pg_tt_connect())
+    print('PUB DB location')

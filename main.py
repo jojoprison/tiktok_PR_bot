@@ -27,7 +27,7 @@ loop = asyncio.get_event_loop()
 
 def choose_bot_token():
     # меняем токен бота в зависимости от нужды, вводим через консоль число
-    console_input_data = input('enter number of bot_token (0 - dev, 1 - pub)')
+    console_input_data = input('enter number of bot_token (0 - dev, 1 - pub)\n')
 
     # флаг цикла корректности введенного числа
     token_invalid = True
@@ -111,7 +111,7 @@ def get_logger_name_main():
 async def update_tt_usernames(time_interval):
     while True:
         print('Doing timer work')
-        update_tt_acc_username_all()
+        await update_tt_acc_username_all()
         time.sleep(time_interval)
 
 
@@ -125,6 +125,31 @@ async def pay_user_for_tasks(user_id, delay):
     payment_sum = await pay_all_completed_user_tasks(user_id)
 
     return payment_sum
+
+
+async def check_clip_recorded_cycle(user_id, clip_order_id, delay):
+    logger = logging.getLogger(f'{get_logger_name_main()}.{check_clip_recorded_cycle.__name__}')
+
+    # тупл, в первом сам факт, во втором task_id
+    is_clip_recorded = False, None
+    try_number = 0
+
+    time_start = datetime.datetime.now()
+    time_wait = datetime.datetime.now() - time_start
+
+    while not is_clip_recorded[0] and time_wait.total_seconds() < 900:
+        logger.info(f'Check clip {clip_order_id} is recorded cycle for user {user_id}: try #{try_number}')
+
+        is_clip_recorded = await check_clip_recorded(user_id, clip_order_id)
+        print(is_clip_recorded)
+
+        time_wait = datetime.datetime.now() - time_start
+        print(time_wait)
+        try_number += 1
+
+        await asyncio.sleep(delay)
+
+    return is_clip_recorded
 
 
 async def return_clip_int_queue(user_id, clip_id, delay):
@@ -237,24 +262,23 @@ async def tt_video_handle(m: types.Message):
 
     try:
         if m.content_type == 'text':
-            clip_link = m.text
+            music_link = m.text
 
-            if valid_tt_link(clip_link):
-                logger.info(f'user {user_id} wanna add {clip_link}')
+            if valid_tt_link(music_link):
+                logger.info(f'user {user_id} wanna add {music_link}')
 
                 # TODO заглушка
-                clip_data = get_music_id_from_clip_tt(clip_link)
-                tt_clip_id = clip_data.get('clip_id')
-                tt_music_id = clip_data.get('music_id')
+                # clip_data = get_music_id_from_clip_tt(music_link)
+                # tt_clip_id = clip_data.get('clip_id')
+                # tt_music_id = clip_data.get('music_id')
 
-                # tt_clip_id = 1
-                # tt_music_id = 2
+                music_id = await get_music_id_from_url(music_link)
 
                 # TODO сохранять видос/линк на него в БД
-                order_id = await save_tt_clip(client=user_id, clip_link=clip_link,
-                                              clip_id=tt_clip_id, music_id=tt_music_id)
+                order_id = await save_tt_clip(client=user_id, music_link=music_link,
+                                              clip_id=0, music_id=music_id)
 
-                logger.info(f'clip added {clip_link}')
+                logger.info(f'clip added {music_link}')
 
                 cancel_promotion = InlineKeyboardMarkup()
                 # TODO добавить эту штуку для удаления видоса в случае нажатия кнопки отмена
@@ -262,7 +286,7 @@ async def tt_video_handle(m: types.Message):
                     InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel_' + str(order_id)))
 
                 await bot.delete_message(message_id=m.message_id - 1, chat_id=m.from_user.id)
-                await m.reply(await SEND_CLIP_COUNT(user_id, clip_link), reply=False, parse_mode='HTML',
+                await m.reply(await SEND_CLIP_COUNT(user_id, music_link), reply=False, parse_mode='HTML',
                               reply_markup=cancel_promotion)
 
                 state = dp.current_state(user=user_id)
@@ -270,7 +294,7 @@ async def tt_video_handle(m: types.Message):
                 # TODO поменять статус и начать пиар видео
                 await state.set_state('SEND_CLIP_COUNT')
             else:
-                logger.info(f'user {user_id} FALL with adding clip {clip_link}')
+                logger.info(f'user {user_id} FALL with adding clip {music_link}')
 
                 cancel = InlineKeyboardMarkup()
                 cancel.add(
@@ -305,13 +329,12 @@ def valid_tt_link(link):
     return netloc == 'www.tiktok.com' or netloc == 'vm.tiktok.com'
 
 
-# TODO сделать метод проверки аккаута TT
-def check_tt_account_link(link):
+async def check_tt_account_link(link):
     netloc = url_parser.urlparse(link).netloc
 
     if netloc == 'www.tiktok.com' or netloc == 'vm.tiktok.com':
         try:
-            get_tt_acc_name(link)
+            await get_tt_acc_name(link)
         except Exception as e:
             return False
 
@@ -440,7 +463,7 @@ async def tt_username_connect(m: types.Message):
             logger.info(f'{user_id} parse tiktok account link: {tt_acc_link}')
 
             # TODO доделать парсер аккаута
-            if check_tt_account_link(tt_acc_link):
+            if await check_tt_account_link(tt_acc_link):
                 logger.info(f'{user_id} save tiktok account link to db: {tt_acc_link}')
 
                 # TODO сохранять ссылку на акк в БД юзера
@@ -996,49 +1019,57 @@ async def check_clip(c: types.CallbackQuery):
     logger.info(f'check_clip user"s {user_id} for paying {clip_order_id}')
 
     try:
-        # TODO добавить проверку музыки по полю из БД
-        await check_clip_for_paying(user_id, clip_order_id)
         user_alltime_clips = await get_alltime_clips(user_id)
 
         state = dp.current_state(user=user_id)
 
-        logger.info(f'user"s clip_order {clip_order_id} success paying added {clip_order_id}')
+        logger.info(f'user"s {user_id} clip_order {clip_order_id} success paying added')
 
         # TODO запускать отдельно в другом месте
-        paying_task = asyncio.create_task(pay_user_for_tasks(user_id, 150))
+        # paying_task = asyncio.create_task(pay_user_for_tasks(user_id, 150))
+        clip_recorded_task = asyncio.create_task(check_clip_recorded_cycle(user_id, clip_order_id, 60))
+        # запускаем такси смены состояния и отправки ответа от бота
         reset_state_task = asyncio.create_task(state.reset_state())
         send_msg_clip_checking_task = asyncio.create_task(c.message.edit_text(TT_CLIP_CHECKING))
-
-        logger.info(f'user {user_id} paying tasks async')
-        # сразу запускаем эту таску, чтобы пользователю побыстрее пришли бабки
-        payment_sum = await paying_task
-        # если клипы засчитались в другую проверку и нет смысла оповещать о 0 бабок
-        # (там их несколько подряд можно запустить)
-        if payment_sum != 0:
-            logger.info(f'user {user_id} update tables for paying')
-
-            user_in_abusers_status = await add_user_to_clip_abusers(clip_order_id, user_id)
-            alltime_get_clips_update_status = await update_user_alltime_get_clips(clip_order_id, 1)
-
-            if user_in_abusers_status and alltime_get_clips_update_status:
-                logger.info(f'user {user_id} get paying')
-
-                if user_alltime_clips == 0:
-                    logger.info(f'user {user_id} pay by referral')
-
-                    ref_father_id = await pay_by_referral(user_id)
-                    if ref_father_id:
-                        # отправит сообщение реф отцу об успешном выполнении задания его сыном
-                        await bot.send_message(ref_father_id, 'Ваш реферал только что выполнил первое задание! '
-                                                              'Вы получили ' + str(REF_BONUS) + ' RUB.')
-                # отправит сообщение, когда получит ответ о пополнении кошелька
-                await bot.send_message(user_id, 'Поздравляю! Вы получили ' + str(payment_sum) + ' RUB.')
-            else:
-                logger.info(f'user {user_id} not earn money')
-
-        # запускаем такси смены состояния и отправки ответа от бота
         await reset_state_task
         await send_msg_clip_checking_task
+
+        logger.info(f'user {user_id} paying tasks')
+        # сразу запускаем эту таску, чтобы пользователю побыстрее пришли бабки
+        is_clip_recorded = await clip_recorded_task
+        print(is_clip_recorded)
+        # если клипы засчитались в другую проверку и нет смысла оповещать о 0 бабок
+        # (там их несколько подряд можно запустить)
+        # if payment_sum != 0:
+        if is_clip_recorded[0]:
+            logger.info(f'user {user_id} update tables for paying')
+
+            is_payed = await pay_for_task(user_id, is_clip_recorded[1])
+
+            if is_payed:
+                user_in_abusers_status = await add_user_to_clip_abusers(clip_order_id, user_id)
+                alltime_get_clips_update_status = await update_user_alltime_get_clips(clip_order_id, 1)
+
+                if user_in_abusers_status and alltime_get_clips_update_status:
+                    logger.info(f'user {user_id} get paying')
+
+                    if user_alltime_clips == 0:
+                        logger.info(f'user {user_id} pay by referral')
+
+                        ref_father_id = await pay_by_referral(user_id)
+                        if ref_father_id:
+                            # отправит сообщение реф отцу об успешном выполнении задания его сыном
+                            await bot.send_message(ref_father_id, 'Ваш реферал только что выполнил первое задание! '
+                                                                  'Вы получили ' + str(REF_BONUS) + ' RUB.')
+                    # отправит сообщение, когда получит ответ о пополнении кошелька
+                    # await bot.send_message(user_id, 'Поздравляю! Вы получили ' + str(payment_sum) + ' RUB.')
+                    await bot.send_message(user_id, 'Поздравляю! Вы получили ' + str(9) + ' RUB.')
+                else:
+                    logger.info(f'user {user_id} not earn money')
+            else:
+                await bot.send_message(user_id, 'Деньги за задние не получены')
+        else:
+            await bot.send_message(user_id, 'Задание не выполнено, попробуйте проверить еще раз!')
 
     except Exception as e:
         logger.error(f'{user_id} got ex: {e}')
@@ -1055,10 +1086,10 @@ async def skip_clip(c: types.CallbackQuery):
     user_id = c.from_user.id
 
     logger.info(f'user {user_id} try to skip clip {clip_id}')
-    logger.info(f'user {user_id} add clip to skipped {clip_id}')
 
     try:
         await add_video_to_skipped(user_id, clip_id)
+        logger.info(f'user {user_id} add clip to skipped {clip_id}')
 
         await c.message.edit_text(TT_VIDEO_SKIPPED)
 
