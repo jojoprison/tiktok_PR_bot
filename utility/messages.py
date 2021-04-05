@@ -214,7 +214,7 @@ def MONEYS(payment_money_amount, payment_comment):
     return message
 
 
-TT_CLIP_CHECKING = 'Подождите 2-3 минуты для проверки. Пока можете записать клипы на другие треки!'
+TT_CLIP_CHECKING = 'Подождите около 10 минут для проверки. Пока можете записать клипы на другие треки!'
 
 
 def STATISTICS(all, die):

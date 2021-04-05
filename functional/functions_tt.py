@@ -1,5 +1,7 @@
 import asyncio
 import datetime
+import random
+import string
 import urllib.parse as url_parser
 
 import pytz
@@ -13,7 +15,7 @@ from db.db_connect import conn
 
 async def save_tt_clip(**data):
     client_id = data['client']
-    clip_link = data['clip_link']
+    music_link = data['music_link']
     clip_id = data['clip_id']
     music_id = data['music_id']
 
@@ -25,10 +27,10 @@ async def save_tt_clip(**data):
     # TODO подумать как по другому проверять параметры на валидность
     if client_id:
         async with conn.transaction():
-            await conn.execute('INSERT INTO clips(client, tt_clip_link, tt_clip_id, tt_music_id, '
+            await conn.execute('INSERT INTO clips(client, tt_music_link, tt_clip_id, tt_music_id, '
                                'goal, status, abusers, date) VALUES($1, $2, $3, $4, $5, $6, $7, $8)',
-                               client_id, clip_link, clip_id, music_id, goal, 2,
-                                str({}), datetime.datetime.now())
+                               client_id, music_link, clip_id, music_id, goal, 2,
+                               str({}), datetime.datetime.now())
 
         order_id = await conn.fetchval('SELECT MAX(order_id) FROM clips')
 
@@ -55,7 +57,7 @@ async def add_tt_acc_to_user(user_id, tt_acc_link):
 
 async def clips_for_work(user_id):
     clip_list = await conn.fetch(
-        'SELECT order_id, tt_clip_link, goal, abusers FROM clips '
+        'SELECT order_id, tt_music_link, goal, abusers FROM clips '
         'WHERE status = 1 AND goal >= 1'
     )
 
@@ -65,14 +67,14 @@ async def clips_for_work(user_id):
 
         for clip_info in clip_list:
             order_id = clip_info['order_id']
-            tt_clip_link = clip_info['tt_clip_link']
+            tt_music_link = clip_info['tt_music_link']
             goal = clip_info['goal']
             abusers = clip_info['abusers']
 
             # число записавших меньше нужного числа и пользователь еще не записывал видос
             if len(eval(abusers)) < goal and user_id not in eval(abusers):
                 # засовываю еще айди чтоб передавать его в callback_data инлайн кнопки
-                good_clips[order_id] = tt_clip_link
+                good_clips[order_id] = tt_music_link
             # TODO удалять видос если больше не промится (хотя можно заносить в другую базу чтоб инфу собирать)
             # else:
             #     delete_channel_from_db(x[0])
@@ -273,7 +275,7 @@ async def alltime_get_clips(user_id):
     return all_time_get_clips
 
 
-def get_tt_acc_name(url):
+async def get_tt_acc_name(url):
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
         "accept": "*/*"}
@@ -290,13 +292,14 @@ def get_tt_acc_name(url):
     return username.get_text()
 
 
-async def update_tt_acc_username(user_id):
+async def update_tt_username(user_id):
     tt_acc_link = await conn.fetchval(
         'SELECT tt_acc_link FROM users WHERE telegram_id = $1',
         user_id,
     )
 
-    tt_acc_username = get_tt_acc_name(tt_acc_link)
+    tt_acc_username = await get_tt_acc_name(tt_acc_link)
+    tt_acc_username = tt_acc_username.replace(' ', '')
 
     async with conn.transaction():
         await conn.execute('UPDATE users SET tt_acc_username = $1 WHERE telegram_id = $2',
@@ -306,7 +309,7 @@ async def update_tt_acc_username(user_id):
 
 
 # TODO пока не юзается
-def update_tt_acc_username_all():
+async def update_tt_acc_username_all():
     user_tt_links = conn.execute(f'SELECT telegram_id, tt_acc_link FROM users WHERE tt_acc_username IS NULL')
     user_tt_links = user_tt_links.fetchall()
 
@@ -317,11 +320,12 @@ def update_tt_acc_username_all():
         tt_link = user_link_tuple[1]
 
         if tt_link is not None:
-            tt_username = get_tt_acc_name(tt_link)
+            tt_username = await get_tt_acc_name(tt_link)
             print(tt_username)
 
             cur = conn.cursor()
-            cur.execute('''UPDATE users SET tt_acc_username = ? WHERE telegram_id = ?''', (tt_username, user_link_tuple[0]))
+            cur.execute('''UPDATE users SET tt_acc_username = ? WHERE telegram_id = ?''',
+                        (tt_username, user_link_tuple[0]))
 
             db_updated = True
 
@@ -346,53 +350,82 @@ async def is_return_clip_in_queue(user_id, clip_id):
                            user_id, (str(skipped_clips)))
 
 
-# TODO проверка существования клипа на данную музыку
-async def check_clip_for_paying(user_id, video_id):
-    async with conn.transaction():
-        await conn.execute('INSERT INTO tasks(user_id, tt_clip_id, status, date) '
-                           'VALUES($1, $2, $3, $4)',
-                           user_id, video_id, 2, datetime.datetime.now())
+async def check_clip_recorded(user_id, order_id):
+    tt_username = await conn.fetchval(
+        'SELECT tt_acc_username FROM users WHERE telegram_id =  $1',
+        user_id,
+    )
 
-    # заглушка для TT
-    # tt_acc_username = await conn.fetchval(
-    #     'SELECT tt_acc_username FROM users WHERE user_id =  $1',
-    #     user_id,
-    # )
-    #
-    # if not tt_acc_username:
-    #     tt_acc_username = await update_tt_acc_username(user_id)
-    #
-    # tt_acc_username = tt_acc_username.replace(' ', '')
-    #
-    # # TODO доделать апи
+    if not tt_username:
+        tt_username = await update_tt_username(user_id)
+
+    tt_username = tt_username.replace(' ', '')
+
     # tt_api = asyncio.get_event_loop().run_in_executor(TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP))
-    #
-    # tt_data = await tt_api.getUser(tt_acc_username)
-    #
-    # tt_clips = await tt_data.get('items')
-    #
-    # last_3_clips = list()
-    # for i in range(0, 3):
-    #     last_3_clips.append(tt_clips[i])
-    #
-    # for clip in last_3_clips:
-    #     clip_created = clip.get('createTime')
-    #
-    #     moscow_tz = pytz.timezone('Europe/Moscow')
-    #
-    #     now = datetime.datetime.now().astimezone(moscow_tz)
-    #     clip_created = datetime.datetime.utcfromtimestamp(clip_created).astimezone(moscow_tz)
-    #
-    #     delta = now - clip_created
-    #     print(delta)
-    #
-    #     seconds = delta.total_seconds()
-    #     hours = seconds // 3600
-    #     print(hours)
+    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True)
+
+    tt_data = tt_api.get_user(tt_username)
+    # print(tt_data)
+
+    tt_clips = tt_data.get('items')
+
+    music_id = await get_music_id_from_order(order_id)
+
+    items_to_check = list()
+    for i in range(0, 3):
+        clip_music_id = tt_clips[i].get('music').get('id')
+        if clip_music_id == music_id:
+            items_to_check.append(tt_clips[i])
+
+    for item in items_to_check:
+        clip_created = item.get('createTime')
+
+        # moscow_tz = pytz.timezone('Europe/Moscow')
+
+        # now = datetime.datetime.now().astimezone(moscow_tz)
+        # местное время в зависимости от локали
+        now = datetime.datetime.now()
+        # время создания клипа с серваков тиктока -3 часа от мск
+        clip_created = datetime.datetime.utcfromtimestamp(clip_created)
+        # добавляем 3 часа ручками, т.к. дельта не может нормальн сосчитат часы падла такая
+        clip_created = clip_created.replace(hour=clip_created.hour + 3)
+
+        delta = now - clip_created
+        print(delta)
+
+        seconds = delta.total_seconds()
+        hours = seconds // 3600
+        print(hours)
+
+        if hours <= 1:
+            item_id = item.get('id')
+
+            is_repeat = await conn.fetchval('SELECT * FROM tasks WHERE user_id = $1 and tt_item_id = $2',
+                                            user_id, item_id)
+
+            if not is_repeat:
+                async with conn.transaction():
+                    task_id = await conn.fetchval('INSERT INTO tasks(user_id, order_id, tt_item_id, '
+                                                  'status, date) VALUES($1, $2, $3, $4, $5) '
+                                                  'RETURNING task_id',
+                                                  user_id, order_id, item_id, 2, datetime.datetime.now())
+
+                return True, task_id
+
+    return False, None
 
 
-def get_music_id_from_clip_tt(short_clip_url):
-    tt_api = TikTokApi.get_instance(use_test_endpoints=True, custom_verifyFp=TT_VERIFY_FP,
+async def get_music_id_from_order(order_id):
+    music_id = await conn.fetchval(
+        'SELECT tt_music_id FROM clips WHERE order_id =  $1',
+        order_id,
+    )
+
+    return music_id
+
+
+async def get_music_id_from_url(short_clip_url):
+    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP,
                                     use_selenium=True)
 
     headers = {
@@ -400,26 +433,43 @@ def get_music_id_from_clip_tt(short_clip_url):
         "accept": "*/*"}
 
     session = requests.Session()
-    full_clip_url = session.get(url=short_clip_url, headers=headers).url
+    html = session.get(url=short_clip_url, headers=headers)
+    full_clip_url = html.url
+    # print(short_clip_url)
+    # print(full_clip_url)
 
     full_clip_url_converted = url_parser.urlparse(full_clip_url).path
-    clip_id = get_clip_id_from_url(full_clip_url_converted)
-    print(type(clip_id))
+    print(full_clip_url_converted)
 
-    print(tt_api.get_music_object('6852257886387570689'))
+    music_id = parse_music_id_from_url(full_clip_url_converted)
+
+    music = tt_api.get_music_object_full(music_id)
+    print(music)
+    # clip_id = get_clip_id_from_url(full_clip_url_converted)
+    # print(clip_id)
+
+    # lolo = tt_api.trending()[0]
+
     # print(tt_api.get_user('squalordf'))
 
-    clip_tt = tt_api.get_tiktok_by_id('6942393058508000513')
+    # c_did = ''.join(random.choice(string.digits) for num in range(19))
+    # t_data = tt_api.get_tiktok_by_id('6947566665664089346', language='ru')
+    # print(t_data)
+    # clip_tt = tt_api.get_tiktok_by_id('6947566665664089346')
+    # clip_tt = tt_api.get_tiktok_by_id(6947566665664089346)
     # clip_tt = tt_api.get_video_by_url(short_clip_url)
-    music_id = clip_tt.get('itemInfo').get('itemStruct').get('music').get('id')
+    # music_id = clip_tt.get('itemInfo').get('itemStruct').get('music').get('id')
 
-    clip_data = {'clip_id': clip_id, 'music_id': music_id}
-    print(clip_data)
+    # clip_data = {'clip_id': clip_id, 'music_id': music_id}
+    # print(clip_data)
 
-    return clip_data
+    return music_id
 
 
 def get_clip_id_from_url(url):
+    # video_id = re.match(r'https:\/\/m.tiktok.com\/v\/(.*)\.html',
+    #                     requests.get(video_url, allow_redirects=False).headers['Location']).group(1)
+
     url_parts = url.split('/')
     url_video_tag = url_parts[1]
 
@@ -429,6 +479,15 @@ def get_clip_id_from_url(url):
         clip_id = url_parts[2].split('.')[0]
 
     return clip_id
+
+
+def parse_music_id_from_url(url):
+    print(url)
+    end_part = url.split('/music/')[1]
+
+    music_id = end_part.split('-')[-1]
+
+    return music_id
 
 
 async def deposit_money_to_balance(user_id, payment_amount):
@@ -479,22 +538,16 @@ async def pay_all_completed_user_tasks(user_id):
     return clip_payment_count * CLIP_PAYMENT
 
 
-# TODO доделать для оплаты таски
-async def pay_completed_user_task(user_id, task_id):
-    clip_payment_count = await conn.fetchval(
-        'SELECT COUNT(*) FROM tasks WHERE user_id = $1 AND status = 2',
-        user_id
-    )
-
+async def pay_for_task(user_id, task_id):
     async with conn.transaction():
         await conn.execute('UPDATE users SET balance = balance + $2,'
                            'alltime_clips = alltime_clips + $3 WHERE telegram_id = $1',
-                           user_id, clip_payment_count * CLIP_PAYMENT, clip_payment_count)
+                           user_id, CLIP_PAYMENT, 1)
 
-        await conn.execute('UPDATE tasks SET status = 1 WHERE user_id = $1',
-                           user_id)
+        await conn.execute('UPDATE tasks SET status = 1 WHERE task_id = $1',
+                           task_id)
 
-    return clip_payment_count * CLIP_PAYMENT
+    return CLIP_PAYMENT
 
 
 async def get_unverified_withdraw_funds():
@@ -663,7 +716,6 @@ async def pay_by_referral(user_id):
 
 
 async def get_table_data(table_name):
-
     table_data = await conn.fetch(
         f'SELECT * FROM {table_name}'
     )
