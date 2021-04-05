@@ -30,12 +30,7 @@ async def run():
             print('got conn')
 
             async with conn.transaction():
-                insert = await conn.fetchval('INSERT INTO tasks(user_id, order_id, tt_item_id, status, date) '
-                                             'VALUES($1, $2, $3, $4, $5) RETURNING task_id',
-                                             1, 2, 3, 2, datetime.datetime.now())
-
-            print(type(insert))
-            print(insert)
+                await conn.execute('DELETE FROM clips WHERE status = 2')
 
             await conn.close()
 
