@@ -1,8 +1,10 @@
+import asyncio
 import datetime
 import urllib.parse as url_parser
 
 import requests
 from TikTokApi import TikTokApi
+from TikTokApi.tiktokapi import TikTokAPI
 from bs4 import BeautifulSoup
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -422,8 +424,9 @@ async def get_music_id_from_order(order_id):
 
 
 async def get_music_id_from_url(short_clip_url):
-    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
-                                    executablePath=get_chromedriver_path())
+    # tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
+    #                                 executablePath=get_chromedriver_path())
+    tt_api = TikTokAPI(cookie=TT_COOKIE)
 
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
@@ -436,11 +439,12 @@ async def get_music_id_from_url(short_clip_url):
     # print(full_clip_url)
 
     full_clip_url_converted = url_parser.urlparse(full_clip_url).path
-    print(full_clip_url_converted)
 
     music_id = parse_music_id_from_url(full_clip_url_converted)
 
-    music = tt_api.get_music_object_full(music_id)
+    # music = tt_api.get_music_object_full(music_id)
+
+    music = asyncio.ensure_future(tt_api.getMusic(music_id))
     print(music)
     # clip_id = get_clip_id_from_url(full_clip_url_converted)
     # print(clip_id)

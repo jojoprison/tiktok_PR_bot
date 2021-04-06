@@ -1,9 +1,11 @@
 import logging
 import logging.config
 import random
+import sys
 import time
 import asyncio
 import pytz
+import traceback
 
 from aiogram import Bot, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -317,7 +319,7 @@ async def tt_video_handle(m: types.Message):
 
     except Exception as e:
         logger.error(f'{user_id} got ex: {e}')
-        print(e)
+        traceback.print_exc()
         await m.reply('Произошла ошибка, нажмите кнопку "Отмена"', reply_markup=cancel_menu)
 
 
