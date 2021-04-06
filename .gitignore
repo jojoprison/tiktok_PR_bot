@@ -2,5 +2,5 @@
 .idea/
 **/__pycache__/
 *.iml
-chromedriver.exe
+#chromedriver.exe
 *.log
