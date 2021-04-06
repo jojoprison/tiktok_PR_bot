@@ -8,6 +8,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from config.settings import *
 from db.db_connect import conn
+from utility.paths import get_chromedriver_path
 
 
 async def save_tt_clip(**data):
@@ -357,7 +358,8 @@ async def check_clip_recorded(user_id, order_id):
     tt_username = tt_username.replace(' ', '')
 
     # tt_api = asyncio.get_event_loop().run_in_executor(TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP))
-    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True)
+    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
+                                    executablePath=get_chromedriver_path())
 
     tt_data = tt_api.get_user(tt_username)
     # print(tt_data)
@@ -420,7 +422,8 @@ async def get_music_id_from_order(order_id):
 
 
 async def get_music_id_from_url(short_clip_url):
-    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True)
+    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
+                                    executablePath=get_chromedriver_path())
 
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
