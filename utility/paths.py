@@ -1,3 +1,4 @@
+import os
 import pathlib
 from sys import platform
 
@@ -27,7 +28,7 @@ def get_chromedriver_path():
     if platform.startswith('linux'):
         driver_path = get_project_root_path().joinpath('chromedriver_linux')
     # win32
-    else :
+    else:
         driver_path = get_project_root_path().joinpath('chromedriver.exe')
 
     print(driver_path)

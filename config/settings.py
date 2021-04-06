@@ -17,6 +17,11 @@ REF_BONUS = 1
 # TODO куки для тиктока (обновлять) / обновляется редко
 TT_VERIFY_FP = 'verify_kn0k4uz8_43UmJVCV_HMR6_4yWM_AmH5_6GKMtd6aOY1D'
 
+TT_COOKIE = {
+        "s_v_web_id": TT_VERIFY_FP,
+        "tt_webid": '6946607478264366598'
+}
+
 LOG_CONFIG_DICT = {
         'version': 1,
         'handlers': {
