@@ -1,4 +1,5 @@
 import pathlib
+from sys import platform
 
 PROJECT_NAME = 'SubVPbot'
 
@@ -22,4 +23,14 @@ def get_project_root_path():
 
 
 def get_chromedriver_path():
-    return get_project_root_path().joinpath('chromedriver.exe')
+    # проверяем ось, с которой запускается бот
+    if platform.startswith('linux'):
+        driver_path = get_project_root_path().joinpath('chromedriver_linux')
+    # win32
+    else :
+        driver_path = get_project_root_path().joinpath('chromedriver.exe')
+
+    print(driver_path)
+    print(type(driver_path))
+
+    return driver_path
