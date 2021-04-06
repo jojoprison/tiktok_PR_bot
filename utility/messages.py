@@ -95,7 +95,7 @@ async def PROFILE(m):
     return profile
 
 
-GIVE_TT_VIDEO_LINK = '❕Для начала продвижения пришлите ссылку на видео в TikTok с вашим треком:'
+GIVE_TT_MUSIC_LINK = '❕Для начала продвижения пришлите ссылку на ЗВУК в TikTok:'
 
 # TODO старое
 GIVE_CHANNEL_LINK = '''❕*Для начала продвижения:*

@@ -251,7 +251,7 @@ async def profile_button_handle(m: types.Message):
 async def add_tt_video_handle(m: types.Message):
     state = dp.current_state(user=m.from_user.id)
     await state.set_state('GET_TT_VIDEO')
-    await m.reply(GIVE_TT_VIDEO_LINK, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
+    await m.reply(GIVE_TT_MUSIC_LINK, reply=False, parse_mode='HTML', reply_markup=cancel_menu)
 
 
 @dp.message_handler(content_types=['text'], state='GET_TT_VIDEO')
