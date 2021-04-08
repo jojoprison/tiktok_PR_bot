@@ -96,14 +96,14 @@ cancel_menu.add(cancel_bt)
 
 logger_name_main = 'bot.main'
 
+# TODO придумать как обновлять значение переменной и кукисов в процессе работы бота
+tik_tok = None
+
 
 def get_logger_name_main():
     logging.config.dictConfig(LOG_CONFIG_DICT)
 
-    moscow_tz = pytz.timezone('Europe/Moscow')
-    now = datetime.datetime.now().astimezone(moscow_tz)
-    # now.timetuple()
-
+    # TODO понять нахера это тут
     logging.Formatter.converter = time.gmtime
 
     return logger_name_main
@@ -142,7 +142,11 @@ async def check_clip_recorded_cycle(user_id, clip_order_id, delay):
     while not is_clip_recorded[0] and time_wait.total_seconds() < 900:
         logger.info(f'Check clip {clip_order_id} is recorded cycle for user {user_id}: try #{try_number}')
 
-        is_clip_recorded = await check_clip_recorded(user_id, clip_order_id)
+        global tik_tok
+        if not tik_tok:
+            tik_tok = TikTok()
+
+        is_clip_recorded = await tik_tok.check_clip_recorded(user_id, clip_order_id)
         print(is_clip_recorded)
 
         time_wait = datetime.datetime.now() - time_start
@@ -269,15 +273,15 @@ async def tt_video_handle(m: types.Message):
             if valid_tt_link(music_link):
                 logger.info(f'user {user_id} wanna add {music_link}')
 
-                # TODO заглушка
-                # clip_data = get_music_id_from_clip_tt(music_link)
-                # tt_clip_id = clip_data.get('clip_id')
-                # tt_music_id = clip_data.get('music_id')
+                global tik_tok
+                if not tik_tok:
+                    tik_tok = TikTok()
 
-                music_id = await get_music_id_from_url(music_link)
+                music_id = await tik_tok.get_music_id_from_url(music_link)
 
                 # TODO сохранять видос/линк на него в БД
-                order_id = await save_tt_clip(client=user_id, music_link=music_link, music_id=music_id)
+                order_id = await save_tt_clip(client=user_id, music_link=music_link,
+                                              music_id=music_id)
 
                 logger.info(f'clip added {music_link}')
 

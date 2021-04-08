@@ -15,11 +15,11 @@ CLIP_PAYMENT = 9
 REF_BONUS = 1
 
 # TODO куки для тиктока (обновлять) / обновляется редко
-TT_VERIFY_FP = 'verify_kn0k4uz8_43UmJVCV_HMR6_4yWM_AmH5_6GKMtd6aOY1D'
+TT_VERIFY_FP = 'verify_kn9bv6ai_6sVcj1g1_wQux_4fs1_AVDG_x8KDPTTcYyth'
 
 TT_COOKIE = {
         "s_v_web_id": TT_VERIFY_FP,
-        "tt_webid": '6946607478264366598'
+        "tt_webid": '6948885120527418885'
 }
 
 LOG_CONFIG_DICT = {
