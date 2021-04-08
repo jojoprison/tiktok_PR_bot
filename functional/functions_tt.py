@@ -13,6 +13,120 @@ from db.db_connect import conn
 from utility.paths import get_chromedriver_path
 
 
+class TikTok:
+    tt_api = None
+
+    def __init__(self):
+        if not self.tt_api:
+            self.tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
+                                            executablePath=get_chromedriver_path())
+
+            # tt_api = asyncio.get_event_loop().run_in_executor(TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP))
+            # tt_api = TikTokAPI(cookie=TT_COOKIE)
+
+    async def get_music_id_from_url(self, short_clip_url):
+
+        headers = {
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
+            "accept": "*/*"}
+
+        session = requests.Session()
+        html = session.get(url=short_clip_url, headers=headers)
+        full_clip_url = html.url
+        # print(short_clip_url)
+        # print(full_clip_url)
+
+        full_clip_url_converted = url_parser.urlparse(full_clip_url).path
+
+        music_id = parse_music_id_from_url(full_clip_url_converted)
+
+        music = self.tt_api.get_music_object_full(music_id)
+
+        # music = asyncio.ensure_future(tt_api.getMusic(music_id))
+
+        print(music)
+        # clip_id = get_clip_id_from_url(full_clip_url_converted)
+        # print(clip_id)
+
+        # lolo = tt_api.trending()[0]
+
+        # print(tt_api.get_user('squalordf'))
+
+        # c_did = ''.join(random.choice(string.digits) for num in range(19))
+        # t_data = tt_api.get_tiktok_by_id('6947566665664089346', language='ru')
+        # print(t_data)
+        # clip_tt = tt_api.get_tiktok_by_id('6947566665664089346')
+        # clip_tt = tt_api.get_tiktok_by_id(6947566665664089346)
+        # clip_tt = tt_api.get_video_by_url(short_clip_url)
+        # music_id = clip_tt.get('itemInfo').get('itemStruct').get('music').get('id')
+
+        # clip_data = {'clip_id': clip_id, 'music_id': music_id}
+        # print(clip_data)
+
+        return music_id
+
+    async def check_clip_recorded(self, user_id, order_id):
+        tt_username = await conn.fetchval(
+            'SELECT tt_acc_username FROM users WHERE telegram_id =  $1',
+            user_id,
+        )
+
+        if not tt_username:
+            tt_username = await update_tt_username(user_id)
+
+        tt_username = tt_username.replace(' ', '')
+
+        tt_data = self.tt_api.get_user(tt_username)
+        # print(tt_data)
+
+        tt_clips = tt_data.get('items')
+
+        music_id = await get_music_id_from_order(order_id)
+
+        items_to_check = list()
+        for i in range(0, 3):
+            clip_music_id = tt_clips[i].get('music').get('id')
+            if clip_music_id == music_id:
+                items_to_check.append(tt_clips[i])
+
+        for item in items_to_check:
+            clip_created = item.get('createTime')
+
+            # moscow_tz = pytz.timezone('Europe/Moscow')
+
+            # now = datetime.datetime.now().astimezone(moscow_tz)
+            # местное время в зависимости от локали
+            now = datetime.datetime.now()
+            # время создания клипа с серваков тиктока -3 часа от мск
+            clip_created = datetime.datetime.utcfromtimestamp(clip_created)
+            # добавляем 3 часа ручками, т.к. дельта не может нормальн сосчитат часы падла такая
+            clip_created = clip_created.replace(hour=clip_created.hour + 3)
+
+            delta = now - clip_created
+            print(delta)
+
+            seconds = delta.total_seconds()
+            hours = seconds // 3600
+            print(hours)
+
+            if hours <= 1:
+                item_id = item.get('id')
+
+                is_repeat = await conn.fetchval('SELECT * FROM tasks WHERE user_id = $1 and tt_item_id = $2',
+                                                user_id, item_id)
+
+                if not is_repeat:
+                    async with conn.transaction():
+                        task_id = await conn.fetchval('INSERT INTO tasks(user_id, order_id, tt_item_id, '
+                                                      'status, date) VALUES($1, $2, $3, $4, $5) '
+                                                      'RETURNING task_id',
+                                                      user_id, order_id, item_id, 2, datetime.datetime.now())
+
+                    return True, task_id
+
+        return False, None
+
+
 async def save_tt_clip(**data):
     client_id = data['client']
     music_link = data['music_link']
@@ -138,7 +252,7 @@ async def delete_tt_clip_from_promo_db(order_id):
         order_id
     )
 
-    if status != 1:
+    if status == 2:
         async with conn.transaction():
             await conn.execute('DELETE FROM clips WHERE order_id = $1',
                                order_id)
@@ -348,121 +462,11 @@ async def is_return_clip_in_queue(user_id, clip_id):
                            user_id, (str(skipped_clips)))
 
 
-async def check_clip_recorded(user_id, order_id):
-    tt_username = await conn.fetchval(
-        'SELECT tt_acc_username FROM users WHERE telegram_id =  $1',
-        user_id,
-    )
-
-    if not tt_username:
-        tt_username = await update_tt_username(user_id)
-
-    tt_username = tt_username.replace(' ', '')
-
-    # tt_api = asyncio.get_event_loop().run_in_executor(TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP))
-    tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
-                                    executablePath=get_chromedriver_path())
-
-    tt_data = tt_api.get_user(tt_username)
-    # print(tt_data)
-
-    tt_clips = tt_data.get('items')
-
-    music_id = await get_music_id_from_order(order_id)
-
-    items_to_check = list()
-    for i in range(0, 3):
-        clip_music_id = tt_clips[i].get('music').get('id')
-        if clip_music_id == music_id:
-            items_to_check.append(tt_clips[i])
-
-    for item in items_to_check:
-        clip_created = item.get('createTime')
-
-        # moscow_tz = pytz.timezone('Europe/Moscow')
-
-        # now = datetime.datetime.now().astimezone(moscow_tz)
-        # местное время в зависимости от локали
-        now = datetime.datetime.now()
-        # время создания клипа с серваков тиктока -3 часа от мск
-        clip_created = datetime.datetime.utcfromtimestamp(clip_created)
-        # добавляем 3 часа ручками, т.к. дельта не может нормальн сосчитат часы падла такая
-        clip_created = clip_created.replace(hour=clip_created.hour + 3)
-
-        delta = now - clip_created
-        print(delta)
-
-        seconds = delta.total_seconds()
-        hours = seconds // 3600
-        print(hours)
-
-        if hours <= 1:
-            item_id = item.get('id')
-
-            is_repeat = await conn.fetchval('SELECT * FROM tasks WHERE user_id = $1 and tt_item_id = $2',
-                                            user_id, item_id)
-
-            if not is_repeat:
-                async with conn.transaction():
-                    task_id = await conn.fetchval('INSERT INTO tasks(user_id, order_id, tt_item_id, '
-                                                  'status, date) VALUES($1, $2, $3, $4, $5) '
-                                                  'RETURNING task_id',
-                                                  user_id, order_id, item_id, 2, datetime.datetime.now())
-
-                return True, task_id
-
-    return False, None
-
-
 async def get_music_id_from_order(order_id):
     music_id = await conn.fetchval(
         'SELECT tt_music_id FROM clips WHERE order_id =  $1',
         order_id,
     )
-
-    return music_id
-
-
-async def get_music_id_from_url(short_clip_url):
-    # tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
-    #                                 executablePath=get_chromedriver_path())
-    tt_api = TikTokAPI(cookie=TT_COOKIE)
-
-    headers = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
-        "accept": "*/*"}
-
-    session = requests.Session()
-    html = session.get(url=short_clip_url, headers=headers)
-    full_clip_url = html.url
-    # print(short_clip_url)
-    # print(full_clip_url)
-
-    full_clip_url_converted = url_parser.urlparse(full_clip_url).path
-
-    music_id = parse_music_id_from_url(full_clip_url_converted)
-
-    # music = tt_api.get_music_object_full(music_id)
-
-    music = asyncio.ensure_future(tt_api.getMusic(music_id))
-    print(music)
-    # clip_id = get_clip_id_from_url(full_clip_url_converted)
-    # print(clip_id)
-
-    # lolo = tt_api.trending()[0]
-
-    # print(tt_api.get_user('squalordf'))
-
-    # c_did = ''.join(random.choice(string.digits) for num in range(19))
-    # t_data = tt_api.get_tiktok_by_id('6947566665664089346', language='ru')
-    # print(t_data)
-    # clip_tt = tt_api.get_tiktok_by_id('6947566665664089346')
-    # clip_tt = tt_api.get_tiktok_by_id(6947566665664089346)
-    # clip_tt = tt_api.get_video_by_url(short_clip_url)
-    # music_id = clip_tt.get('itemInfo').get('itemStruct').get('music').get('id')
-
-    # clip_data = {'clip_id': clip_id, 'music_id': music_id}
-    # print(clip_data)
 
     return music_id
 
