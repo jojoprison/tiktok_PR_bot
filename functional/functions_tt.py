@@ -4,7 +4,7 @@ import urllib.parse as url_parser
 
 import requests
 from TikTokApi import TikTokApi
-from TikTokApi.tiktokapi import TikTokAPI
+# from TikTokApi.tiktokapi import TikTokAPI
 from bs4 import BeautifulSoup
 from webdriver_manager.chrome import ChromeDriverManager
 
