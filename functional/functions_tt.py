@@ -1,6 +1,8 @@
 import asyncio
 import datetime
 import urllib.parse as url_parser
+import multiprocessing
+import time
 
 import requests
 from TikTokApi import TikTokApi
@@ -18,8 +20,9 @@ class TikTok:
 
     def __init__(self):
         if not self.tt_api:
-            self.tt_api = TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
-                                            executablePath=get_chromedriver_path())
+            # TODO понять почему не дает инстанс
+            self.tt_api = TikTokApi.get_instance(use_test_endpoints=True, custom_verifyFp=TT_VERIFY_FP, use_selenium=True,
+                                                 executablePath=get_chromedriver_path())
 
             # tt_api = asyncio.get_event_loop().run_in_executor(TikTokApi.get_instance(custom_verifyFp=TT_VERIFY_FP))
             # tt_api = TikTokAPI(cookie=TT_COOKIE)

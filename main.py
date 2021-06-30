@@ -162,7 +162,7 @@ async def return_clip_int_queue(user_id, clip_id, delay):
     await asyncio.sleep(delay)
 
     logger = logging.getLogger(f'{get_logger_name_main()}.{return_clip_int_queue.__name__}')
-    logger.info('Wait for clip in queue for : ' + str(delay) + ', clip_id = ' + str(clip_id))
+    logger.info(f' {user_id} Wait for clip {clip_id} in queue for: {delay} sec')
 
     await is_return_clip_in_queue(user_id, clip_id)
 
@@ -748,6 +748,8 @@ async def withdraw_funds_location(m: types.Message):
 # админская способность рассылки
 @dp.message_handler(content_types=['text', 'video', 'photo', 'document', 'animation'], state='GET_MSG_FOR_MAIL')
 async def mailing(m: types.Message):
+    logger = logging.getLogger(f'{get_logger_name_main()}.{mailing.__name__}')
+
     state = dp.current_state(user=m.from_user.id)
     await state.reset_state()
 
@@ -757,15 +759,21 @@ async def mailing(m: types.Message):
         all_users = 0
         blocked_users = 0
 
+        mail_content = m.html_text
+
+        logger.info(f' mailing: {mail_content}')
+
         for user_id in users:
             try:
-                await bot.send_message(user_id, m.html_text, parse_mode='HTML')
+                await bot.send_message(user_id, mail_content, parse_mode='HTML')
                 all_users += 1
                 await asyncio.sleep(0.3)
             except BotBlocked:
                 blocked_users += 1
             except Exception as e:
                 print(e)
+
+        logger.info(f' success mailing: {mail_content}')
 
         await m.reply(MAILING_END(all_users, blocked_users), reply=False)
     if m.content_type == 'photo':
@@ -1010,6 +1018,7 @@ async def confirm_clip_promo(c: types.callback_query):
 
     except Exception as e:
         logger.error(f'{user_id} got ex: {e}')
+        traceback.print_exception(type(e), e, e.__traceback__)
         await bot.send_message(user_id, 'Произошла ошибка, нажмите кнопку "Отмена"',
                                reply_markup=cancel_menu)
 
@@ -1078,6 +1087,7 @@ async def check_clip(c: types.CallbackQuery):
 
     except Exception as e:
         logger.error(f'{user_id} got ex: {e}')
+        traceback.print_exc(e)
         await bot.send_message(user_id, 'Произошла ошибка, нажмите кнопку "Отмена"',
                                reply_markup=cancel_menu)
 
