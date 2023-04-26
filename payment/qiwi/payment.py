@@ -5,8 +5,8 @@ import datetime
 
 conn = sqlite3.connect('D:\\PyCharm_projects\\SubVPbot\\db\\ttdb.db')
 
-QIWI_TOKEN = '543fa02d3b1823ca6a9d536ca749dba7'
-QIWI_ACCOUNT = '+79100938360'
+QIWI_TOKEN = ''
+QIWI_ACCOUNT = ''
 
 
 def create_table():
