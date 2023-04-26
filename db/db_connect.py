@@ -38,9 +38,9 @@ class DbConnect:
         try:
             # придумать где закрывать шлюз к серваку
             server = SSHTunnelForwarder(
-                ('135.181.251.7', 22),
-                ssh_username='squalordf',
-                ssh_password='149367139Diez',
+                ('', 22),
+                ssh_username='',
+                ssh_password='',
                 remote_bind_address=('localhost', 5432)
             )
 
@@ -48,10 +48,10 @@ class DbConnect:
             print('server connected')
 
             db_params = {
-                'database': 'tiktok_bot',
-                'user': 'postgres',
-                'password': 'postgres',
-                'host': 'localhost',
+                'database': '',
+                'user': '',
+                'password': '',
+                'host': '',
                 'port': server.local_bind_port
             }
 
@@ -71,10 +71,10 @@ class DbConnect:
 
     async def _get_pg_local_connect(self):
         params = {
-            'database': 'tiktok_bot',
-            'user': 'postgres',
-            'password': 'postgres',
-            'host': 'localhost',
+            'database': '',
+            'user': '',
+            'password': '',
+            'host': '',
         }
 
         print('connect local')

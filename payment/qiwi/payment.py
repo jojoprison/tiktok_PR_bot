@@ -5,11 +5,11 @@ import requests
 from db.db_connect import conn
 from payment.qiwi.comment_generation import generate_comment
 
-# мой киви токен: 543fa02d3b1823ca6a9d536ca749dba7
+# мой киви токен:
 # киви токен Димаса
-QIWI_TOKEN = 'bcfa9c2d9819ee7e6fb414736032365f'
+QIWI_TOKEN = ''
 # и его тел сответственно
-QIWI_ACCOUNT = '+79301042966'
+QIWI_ACCOUNT = ''
 
 
 def create_table():
