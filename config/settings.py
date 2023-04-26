@@ -3,11 +3,11 @@ BOT_TOKEN_DEV = ''
 BOT_TOKEN_PUB = ''
 
 # TODO куки для тиктока (обновлять) / обновляется редко
-TT_VERIFY_FP = 'verify_knkfa9v6_LjWvDJpI_xIom_4Fiq_8WeV_gNJixQ1OtNSD'
+TT_VERIFY_FP = ''
 
 TT_COOKIE = {
         "s_v_web_id": TT_VERIFY_FP,
-        "tt_webid": '6948885120527418885'
+        "tt_webid": ''
 }
 
 # админы бота через запятую
